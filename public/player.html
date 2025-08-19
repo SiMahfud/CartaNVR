@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JSMpeg Player</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <canvas id="video-canvas"></canvas>
+    <script src="jsmpeg.min.js"></script>
+    <script>
+        const canvas = document.getElementById('video-canvas');
+        let player = null;
+        let cameraId = null;
+
+        window.addEventListener('message', event => {
+            if (event.origin !== window.location.origin) return;
+
+            const data = event.data;
+            if (data.wsUrl && data.cameraId) {
+                cameraId = data.cameraId;
+                if (player) player.destroy();
+
+                player = new JSMpeg.Player(data.wsUrl, {
+                    canvas: canvas,
+                    autoplay: true,
+                    // Tambahkan callback onPlay
+                    onPlay: (p) => {
+                        // Setelah video mulai, kirim resolusinya ke halaman utama
+                        window.parent.postMessage({ 
+                            type: 'resolution', 
+                            cameraId: cameraId,
+                            width: p.video.width,
+                            height: p.video.height
+                        }, window.location.origin);
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('error', function(event) {
+            const errorMessage = event.message || (event.error ? event.error.toString() : '');
+
+            if (errorMessage.includes('memory access out of bounds')) {
+                console.error("Fatal WASM crash detected.");
+                event.preventDefault();                
+                // kirim sinyal reload ke parent
+                window.parent.postMessage({ type: 'reload', cameraId: cameraId }, window.location.origin);
+            }
+        });
+    </script>
+</body>
+</html>

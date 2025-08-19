@@ -1,0 +1,24 @@
+# Dependencies
+/node_modules
+
+# Runtime Data
+/recordings/
+/public/hls/
+*.db
+*.db-journal
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backup files
+* copy.js
+* copy.html
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

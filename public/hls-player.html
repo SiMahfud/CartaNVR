@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HLS Player</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #000; height: 100%; }
+    video { width: 100%; height: 100%; display: block; background: #000; }
+  </style>
+</head>
+<body>
+  <video id="video" playsinline muted></video>
+  <!-- hls.js dari CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const video = document.getElementById('video');
+    let currentSrc = null;
+
+    function playHls(url) {
+      // Jika browser mendukung native HLS (Safari, iOS)
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', sendResolutionOnce, { once: true });
+        video.play().catch(()=>{});
+      } else if (window.Hls && window.Hls.isSupported()) {
+        const hls = new Hls({ liveSyncDurationCount: 3 });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(()=>{});
+        });
+        hls.on(Hls.Events.LEVEL_LOADED, () => {
+          sendResolutionOnce();
+        });
+      } else {
+        console.error('HLS not supported in this browser.');
+      }
+    }
+
+    function sendResolutionOnce() {
+      // Tunggu metadata video terisi agar videoWidth/videoHeight valid
+      const trySend = () => {
+        const w = video.videoWidth;
+        const h = video.videoHeight;
+        if (w && h) {
+          window.parent.postMessage({ type: 'resolution', cameraId: window.__cameraId, width: w, height: h }, window.location.origin);
+        } else {
+          setTimeout(trySend, 200);
+        }
+      };
+      trySend();
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data || {};
+      if (data.manifestUrl && data.cameraId) {
+        window.__cameraId = data.cameraId;
+        if (data.manifestUrl !== currentSrc) {
+          currentSrc = data.manifestUrl;
+          playHls(currentSrc);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
