@@ -27,7 +27,7 @@ app.use(session({
   secret: 'your-very-secret-key', // Ganti dengan secret yang lebih aman
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // Cookie berlaku 24 jam
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // Cookie berlaku 7 hari
 }));
 
 // Inisialisasi Passport
