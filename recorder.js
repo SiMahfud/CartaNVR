@@ -1,18 +1,7 @@
 'use strict';
 
 /**
- * recorder.js — versi robust
- *
- * Perbaikan utama:
- * - Ganti fs.watch → chokidar (lebih andal untuk banyak file)
- * - Antrian remux faststart dengan in-flight guard + debounce per file
- * - Exponential backoff & max retry untuk restart ffmpeg per kamera
- * - Graceful shutdown ffmpeg (SIGTERM → timeout → SIGKILL)
- * - Periodic DB sync (selain one-time sync di startup)
- * - Fallback timestamp pakai mtime jika parsing nama file gagal
- * - Cleanup storage asynchronous (fs.promises) + lebih hemat I/O
- * - Concurrency remux dinamis (default: min(4, max(2, CPU-1)))
- * - Konfigurasi HLS: hls_time default 4s untuk mengurangi jumlah segment
+ * recorder.js
  */
 
 const fs = require('fs');
@@ -57,6 +46,7 @@ const processes = new Map();           // camId → child_process
 const procState = new Map();           // camId → { retries, nextDelay, coolUntil }
 const intervals = new Map();           // name → setInterval ref
 const activeWatchers = new Map();      // dir → chokidar FSWatcher
+const lastFilePerDir = new Map();      // dirPath → last detected filePath (UNTUK LOGIKA BARU)
 
 /** ====== UTIL ====== */
 const now = () => Date.now();
@@ -144,6 +134,8 @@ const processedOnce = new Set();        // mencegah pengulangan process berlebih
 function enqueueRemuxJob(filePath) {
   if (!FASTSTART_POSTPROC) return;
   if (!filePath.endsWith('.mp4')) return;
+
+  console.log('[RECORDER] Segmen file baru tersimpan dan selesai ditulis:', filePath);
 
   // debounce 500ms tiap file
   clearTimeout(pendingDebounce.get(filePath));
@@ -393,7 +385,7 @@ function buildFfmpegArgs(camera, camRecDir, camHlsDir) {
     '-an',
     '-f','segment',
     '-reset_timestamps','1',
-    '-segment_time','180',
+    '-segment_time','180', // <-- Segmen 3 menit
     '-strftime','1',
     '-segment_format_options','movflags=+faststart',
     recordingTemplate,
@@ -478,6 +470,9 @@ function startFFmpegForCamera(camera) {
   startDirWatcher(camRecDir);
 }
 
+// =========================================================================
+// ==================== FUNGSI YANG DIPERBARUI =============================
+// =========================================================================
 function startDirWatcher(dirPath) {
   if (activeWatchers.has(dirPath)) return;
 
@@ -485,14 +480,34 @@ function startDirWatcher(dirPath) {
     persistent: true,
     depth: 0,
     ignoreInitial: true,
+    // Kita masih menggunakan awaitWriteFinish untuk event 'change' sebagai fallback
     awaitWriteFinish: {
       stabilityThreshold: POSTPROC_STABLE_MS,
       pollInterval: 200
     }
   });
 
-  watcher.on('add', (fp) => enqueueRemuxJob(fp));
-  watcher.on('change', (fp) => enqueueRemuxJob(fp));
+  // LOGIKA BARU: event 'add' sekarang memproses file SEBELUMNYA
+  watcher.on('add', (newFile) => {
+    // Ambil file sebelumnya yang tersimpan untuk direktori ini
+    const previousFile = lastFilePerDir.get(dirPath);
+
+    // Jika ada file sebelumnya (bukan file pertama yang dibuat)
+    if (previousFile && previousFile !== newFile) {
+      console.log(`[RECORDER] File baru terdeteksi: ${path.basename(newFile)}. Memproses file sebelumnya: ${path.basename(previousFile)}`);
+      // Jalankan job untuk file yang sudah selesai ditulis
+      enqueueRemuxJob(previousFile);
+    }
+
+    // Selalu update file terbaru yang terdeteksi untuk direktori ini
+    lastFilePerDir.set(dirPath, newFile);
+  });
+
+  // LOGIKA LAMA
+  // Berguna untuk memproses segmen TERAKHIR saat rekaman dihentikan,
+  // karena tidak akan ada event 'add' lagi untuk memicunya.
+  // watcher.on('change', (fp) => enqueueRemuxJob(fp));
+
   watcher.on('error', (e) => console.warn('[RECORDER] Watcher error:', dirPath, e.message));
 
   activeWatchers.set(dirPath, watcher);
