@@ -172,6 +172,20 @@
         applyTheme();
         // --- End Dark Mode Logic ---
 
+        let hiddenActiveCameraIds = [];
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                hiddenActiveCameraIds = Object.keys(iframes);
+                hiddenActiveCameraIds.forEach(id => stopPlayer(id));
+            } else {
+                if (hiddenActiveCameraIds.length > 0) {
+                    hiddenActiveCameraIds.forEach(id => startPlayer(id));
+                    hiddenActiveCameraIds = [];
+                }
+            }
+        });
+
         window.addEventListener('message', (event) => {
             if (event.origin !== window.location.origin) return;
             const data = event.data;

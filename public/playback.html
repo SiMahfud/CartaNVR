@@ -424,6 +424,19 @@
       }
 
       // ===== Events =====
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (!els.player.paused) {
+            els.player.pause();
+          }
+        } else {
+          if (els.player.paused) {
+            if (els.player.currentSrc) {
+              els.player.play().catch(e => console.error("Playback failed", e));
+            }
+          }
+        }
+      });
       els.playPause.addEventListener('click', () => { els.player.paused ? els.player.play() : els.player.pause(); });
       els.player.addEventListener('play', () => els.playPause.textContent = '⏸ Pause');
       els.player.addEventListener('pause', () => els.playPause.textContent = '▶ Play');
