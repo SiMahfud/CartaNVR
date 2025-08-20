@@ -6,85 +6,174 @@ const { spawn } = require('child_process');
 const database = require('./lib/database');
 
 /** ====== KONFIGURASI ====== */
-const RECORDINGS_DIR = path.join(__dirname, 'recordings');
-const HLS_ROOT_DIR   = path.join(__dirname, 'public', 'hls');
-const MAX_STORAGE    = 600 * 1024 * 1024 * 1024; // 600 GB total (ubah sesuai kebutuhan)
-const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 menit
+const RECORDINGS_DIR      = path.join(__dirname, 'recordings');
+const HLS_ROOT_DIR        = path.join(__dirname, 'public', 'hls');
+const MAX_STORAGE         = 600 * 1024 * 1024 * 1024; // 600 GB total
+const SEGMENT_DURATION    = 180; // detik, sesuai dengan -segment_time di ffmpeg
+
+// Pengaturan post-process faststart
+const FASTSTART_POSTPROC      = true;
+const POSTPROC_DELAY_MS       = 1500;
+const POSTPROC_STABLE_MS      = 1200;
+const POSTPROC_MAX_RETRY      = 5;
+const POSTPROC_RETRY_BACKOFF  = 1000;
+const QUEUE_CONCURRENCY       = 2;
 
 if (!fs.existsSync(RECORDINGS_DIR)) fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
 if (!fs.existsSync(HLS_ROOT_DIR))   fs.mkdirSync(HLS_ROOT_DIR,   { recursive: true });
 
 const processes = new Map();
-const intervals = new Map();
 
-/** Helper untuk mendapatkan durasi video dengan ffprobe */
-function getVideoDuration(filePath) {
+/** ====== FASTSTART QUEUE ====== */
+
+const jobQueue = [];
+let runningJobs = 0;
+const inQueue = new Set();
+
+function enqueueRemuxJob(filePath) {
+  if (!FASTSTART_POSTPROC) return;
+  if (!filePath.endsWith('.mp4')) return;
+  if (inQueue.has(filePath)) return;
+
+  inQueue.add(filePath);
+  jobQueue.push({ filePath, attempts: 0, nextDelay: POSTPROC_RETRY_BACKOFF });
+  processQueue();
+}
+
+function processQueue() {
+  while (runningJobs < QUEUE_CONCURRENCY && jobQueue.length > 0) {
+    const job = jobQueue.shift();
+    runningJobs++;
+    processJob(job)
+      .catch(() => {})
+      .finally(() => {
+        runningJobs--;
+        processQueue();
+      });
+  }
+}
+
+function waitFileStable(filePath, stableMs = POSTPROC_STABLE_MS, timeoutMs = 20000) {
+  return new Promise((resolve) => {
+    let lastSize = -1;
+    let lastChange = Date.now();
+    const start = Date.now();
+
+    const itv = setInterval(() => {
+      fs.stat(filePath, (err, st) => {
+        if (err) {
+          clearInterval(itv);
+          return resolve(true);
+        }
+        if (st.size !== lastSize) {
+          lastSize = st.size;
+          lastChange = Date.now();
+        }
+        if (Date.now() - lastChange >= stableMs) {
+          clearInterval(itv);
+          resolve(true);
+        }
+        if (Date.now() - start > timeoutMs) {
+          clearInterval(itv);
+          resolve(true);
+        }
+      });
+    }, 250);
+  });
+}
+
+async function processJob(job) {
+  const { filePath } = job;
+  try {
+    if (!fs.existsSync(filePath)) {
+      inQueue.delete(filePath);
+      return;
+    }
+
+    await new Promise(r => setTimeout(r, POSTPROC_DELAY_MS));
+    await waitFileStable(filePath);
+
+    await fixMoovAtom(filePath);
+    inQueue.delete(filePath);
+    console.log('[FASTSTART] Sukses remux:', filePath);
+  } catch (e) {
+    job.attempts++;
+    if (job.attempts < POSTPROC_MAX_RETRY) {
+      console.warn(`[FASTSTART] Gagal remux (attempt ${job.attempts}) untuk ${filePath}: ${e.message}`);
+      await new Promise(r => setTimeout(r, job.nextDelay));
+      job.nextDelay = Math.min(job.nextDelay * 1.5, 10000);
+      jobQueue.push(job);
+    } else {
+      console.error(`[FASTSTART] Gagal permanen remux ${filePath}:`, e.message);
+      inQueue.delete(filePath);
+    }
+  }
+}
+
+function fixMoovAtom(filePath) {
   return new Promise((resolve, reject) => {
-    const ffprobe = spawn('ffprobe', [
-      '-v', 'quiet',
-      '-print_format', 'json',
-      '-show_format',
-      filePath
+    const dir = path.dirname(filePath);
+    const base = path.basename(filePath, '.mp4');
+    const tmpFile = path.join(dir, `${base}.faststart.tmp.mp4`);
+
+    const ff = spawn('ffmpeg', [
+      '-v', 'error',
+      '-y',
+      '-i', filePath,
+      '-c', 'copy',
+      '-movflags', '+faststart',
+      tmpFile
     ], { windowsHide: true });
 
-    let jsonData = '';
-    ffprobe.stdout.on('data', (data) => { jsonData += data.toString(); });
-    ffprobe.on('error', (err) => reject(err));
-    ffprobe.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`ffprobe exited with code ${code}`));
-      try {
-        const metadata = JSON.parse(jsonData);
-        resolve(parseFloat(metadata.format.duration) || 0);
-      } catch (e) {
-        reject(e);
+    let errLog = '';
+    ff.stderr.on('data', (d) => { errLog += d.toString(); });
+
+    ff.on('close', (code) => {
+      if (code === 0) {
+        try {
+          fs.renameSync(tmpFile, filePath);
+          resolve(true);
+        } catch (e) {
+          try { fs.unlinkSync(tmpFile); } catch {}
+          reject(e);
+        }
+      } else {
+        try { fs.unlinkSync(tmpFile); } catch {}
+        reject(new Error(errLog || `ffmpeg exited with code ${code}`));
       }
     });
   });
 }
 
-/** Sinkronisasi rekaman dari filesystem ke database */
-async function syncFileSystemToDatabase() {
-  console.log('[RECORDER] Starting filesystem sync to database...');
+/** ====== DB SYNC REAL-TIME ====== */
+
+async function addSegmentToDatabase(camId, filePath) {
   try {
-    const cameras = await database.getAllCameras();
-    for (const camera of cameras) {
-      const camDir = path.join(RECORDINGS_DIR, `cam_${camera.id}`);
-      if (!fs.existsSync(camDir)) continue;
+    const fileName = path.basename(filePath, '.mp4');
+    const [datePart, timePart] = fileName.split('_');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split('-').map(Number);
 
-      const files = fs.readdirSync(camDir).filter(f => f.endsWith('.mp4'));
-      for (const file of files) {
-        try {
-          const filePath = path.join(camDir, file);
-          const relativePath = `/recordings/cam_${camera.id}/${file}`;
-          const duration = await getVideoDuration(filePath);
+    const timestamp = new Date(year, month - 1, day, hour, minute, second).getTime();
+    const duration = SEGMENT_DURATION;
 
-          const name = path.basename(file, '.mp4');
-          const [datePart, timePart] = name.split('_');
-          const [year, month, day] = datePart.split('-').map(Number);
-          const [hour, minute, second] = timePart.split('-').map(Number);
-          const timestamp = new Date(year, month - 1, day, hour, minute, second).getTime();
+    const relativePath = `/recordings/cam_${camId}/${fileName}.mp4`;
 
-          if (duration > 0 && !isNaN(timestamp)) {
-            await database.addRecording({
-              camera_id: camera.id,
-              file_path: relativePath,
-              timestamp: timestamp,
-              duration: duration
-            });
-          }
-        } catch (e) {
-          // Abaikan jika file rusak atau ffprobe gagal, lanjut ke file berikutnya
-          // console.error(`[RECORDER] Failed to process file ${file}:`, e.message);
-        }
-      }
-    }
+    await database.addRecording({
+      camera_id: camId,
+      file_path: relativePath,
+      timestamp,
+      duration
+    });
+
+    console.log(`[DB] Added recording: cam=${camId}, file=${fileName}.mp4`);
   } catch (e) {
-    console.error('[RECORDER] Error during filesystem sync:', e);
+    console.error('[DB] Failed to add recording:', filePath, e.message);
   }
-  console.log('[RECORDER] Filesystem sync finished.');
 }
 
-/** Hapus file paling lama dan sinkronkan ke DB */
+/** ====== CLEANUP STORAGE ====== */
+
 async function cleanupStorage() {
   try {
     if (!fs.existsSync(RECORDINGS_DIR)) return;
@@ -105,7 +194,7 @@ async function cleanupStorage() {
       return files;
     }
 
-    let list = listFiles(RECORDINGS_DIR).sort((a, b) => a.time - b.time);
+    let list = listFiles(RECORDINGS_DIR).filter(x => x.file.endsWith('.mp4')).sort((a, b) => a.time - b.time);
     let total = list.reduce((acc, f) => acc + f.size, 0);
 
     while (total > MAX_STORAGE && list.length > 0) {
@@ -128,15 +217,14 @@ async function cleanupStorage() {
   }
 }
 
-/** Start satu proses ffmpeg per kamera */
+/** ====== REKAMAN (FFMPEG) ====== */
+
 function startFFmpegForCamera(camera) {
   const camId = camera.id;
-  if (!camId) {
-    console.error('[RECORDER] Camera without id:', camera);
-    return;
-  }
+  if (!camId) return;
+
   if (processes.has(camId)) {
-    console.log(`[RECORDER] FFmpeg for cam ${camId} already running. Skipping.`);
+    console.log(`[RECORDER] FFmpeg for cam ${camId} already running.`);
     return;
   }
 
@@ -151,13 +239,15 @@ function startFFmpegForCamera(camera) {
   const args = [
     '-rtsp_transport', 'tcp',
     '-i', camera.rtsp_url,
+
     '-map', '0:v:0', '-c:v', 'copy', '-an',
     '-f', 'segment',
     '-reset_timestamps', '1',
-    '-segment_time', '180', // 3 menit
+    '-segment_time', String(SEGMENT_DURATION),
     '-strftime', '1',
     '-segment_format_options', 'movflags=+faststart',
     recordingTemplate,
+
     '-map', '0:v:0', '-c:v', 'copy', '-an',
     '-f', 'hls',
     '-hls_time', '1',
@@ -169,16 +259,43 @@ function startFFmpegForCamera(camera) {
   console.log(`[RECORDER] Starting FFmpeg for cam ${camId}...`);
   const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
 
-  proc.stderr.on('data', (d) => { /* process.stdout.write(`[FFMPEG ${camId}] ${d}`); */ });
-
-  proc.on('close', (code, signal) => {
-    console.warn(`[RECORDER] FFmpeg for cam ${camId} exited (code=${code}, signal=${signal}). Restarting in 2s...`);
+  proc.on('close', () => {
+    console.warn(`[RECORDER] FFmpeg for cam ${camId} exited. Restarting in 2s...`);
     processes.delete(camId);
     setTimeout(() => startFFmpegForCamera(camera), 2000);
   });
 
   processes.set(camId, proc);
+
+  // Watch folder rekaman
+  startDirWatcher(camId, camRecDir);
 }
+
+const activeWatchers = new Map();
+
+function startDirWatcher(camId, dirPath) {
+  if (activeWatchers.has(dirPath)) return;
+
+  const watcher = fs.watch(dirPath, { persistent: true }, (eventType, filename) => {
+    if (!filename || !filename.endsWith('.mp4')) return;
+    const full = path.join(dirPath, filename);
+    fs.stat(full, (err, st) => {
+      if (!err && st.isFile()) {
+        enqueueRemuxJob(full);
+        addSegmentToDatabase(camId, full); // real-time sync DB
+        cleanupStorage(); // optional: cek storage tiap kali ada file baru
+      }
+    });
+  });
+
+  watcher.on('error', (e) => {
+    console.warn('[RECORDER] Watcher error:', dirPath, e.message);
+  });
+
+  activeWatchers.set(dirPath, watcher);
+}
+
+/** ====== START/STOP ====== */
 
 async function startAllRecordings() {
   const cameras = await database.getAllCameras();
@@ -187,18 +304,6 @@ async function startAllRecordings() {
     return;
   }
   cameras.forEach((cam) => startFFmpegForCamera(cam));
-
-  // Jalankan cleanup & sync saat start dan setiap interval
-  if (!intervals.has('global_sync')) {
-    cleanupStorage(); // Jalankan segera saat start
-    syncFileSystemToDatabase(); // Jalankan segera saat start
-
-    const itv = setInterval(() => {
-      cleanupStorage();
-      syncFileSystemToDatabase();
-    }, SYNC_INTERVAL_MS);
-    intervals.set('global_sync', itv);
-  }
 }
 
 function stopAllRecordings() {
@@ -206,9 +311,9 @@ function stopAllRecordings() {
     try { proc.kill('SIGTERM'); } catch {}
     processes.delete(camId);
   }
-  for (const [id, itv] of intervals.entries()) {
-    clearInterval(itv);
-    intervals.delete(id);
+  for (const [dir, watcher] of activeWatchers.entries()) {
+    try { watcher.close(); } catch {}
+    activeWatchers.delete(dir);
   }
 }
 
