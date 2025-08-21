@@ -56,7 +56,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            aspect-ratio: 4 / 3; 
+            aspect-ratio: 16 / 9; 
             overflow: hidden;
             transition: aspect-ratio 0.3s ease;
         }
@@ -245,7 +245,7 @@
                     const statusEl = card.querySelector('.camera-status');
                     statusEl.textContent = "Disconnected";
                     statusEl.className = "camera-status status-disconnected";
-                    container.style.aspectRatio = '4 / 3';
+                    container.style.aspectRatio = '16 / 9';
                 }
             }
         };

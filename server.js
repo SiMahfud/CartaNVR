@@ -8,6 +8,7 @@ const onvifScanner = require('./lib/onvif-scanner');
 
 // Modul untuk Autentikasi
 const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcryptjs');
@@ -20,10 +21,10 @@ const PORT = process.env.PORT || 3000;
 // Middleware dasar
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // Penting untuk form login
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Konfigurasi Session
 app.use(session({
+  store: new SQLiteStore({ db: 'nvr.db', table: 'sessions', dir: __dirname }),
   secret: 'your-very-secret-key', // Ganti dengan secret yang lebih aman
   resave: false,
   saveUninitialized: false,
@@ -33,6 +34,16 @@ app.use(session({
 // Inisialisasi Passport
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Rute untuk Halaman Login (harus sebelum express.static)
+app.get('/', (req, res) => {
+  if (req.isAuthenticated()) {
+    return res.redirect('/dashboard');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Konfigurasi Strategi Login Passport
 passport.use(new LocalStrategy(
@@ -90,14 +101,6 @@ app.get('/logout', (req, res, next) => {
 });
 
 // === Rute Halaman & API ===
-
-// Halaman Login
-app.get('/', (req, res) => {
-  if (req.isAuthenticated()) {
-    return res.redirect('/dashboard');
-  }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // Halaman Dashboard (setelah login)
 app.get('/dashboard', isAuthenticated, (req, res) => {
