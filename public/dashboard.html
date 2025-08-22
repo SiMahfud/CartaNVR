@@ -24,6 +24,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 400px));
             gap: 1.5rem;
+            justify-content: center;
         }
         .camera-card {
             border-radius: 1rem;
@@ -248,13 +249,32 @@
             }
         };
 
-        const toggleFullscreen = (cameraId) => {
+        const toggleFullscreen = async (cameraId) => {
             const iframe = iframes[cameraId];
             if (!iframe) return;
+
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
             if (!document.fullscreenElement) {
-                if (iframe.requestFullscreen) iframe.requestFullscreen();
+                try {
+                    await iframe.requestFullscreen();
+                    if (isMobile && screen.orientation && screen.orientation.lock) {
+                        await screen.orientation.lock('landscape');
+                    }
+                } catch (err) {
+                    console.error('Error entering fullscreen or locking orientation:', err);
+                }
             } else {
-                if (document.exitFullscreen) document.exitFullscreen();
+                try {
+                    if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    }
+                    if (isMobile && screen.orientation && screen.orientation.unlock) {
+                        screen.orientation.unlock();
+                    }
+                } catch (err) {
+                    console.error('Error exiting fullscreen or unlocking orientation:', err);
+                }
             }
         };
 
