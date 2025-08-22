@@ -22,7 +22,7 @@
         }
         .camera-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 400px));
             gap: 1.5rem;
         }
         .camera-card {
@@ -206,7 +206,7 @@
             }
         });
 
-        const startPlayer = (cameraId) => {
+                const startPlayer = (cameraId) => {
             if (iframes[cameraId]) return;
             const container = document.getElementById(`camera-container-${cameraId}`);
             if (!container) return;
@@ -217,13 +217,11 @@
             statusEl.className = "camera-status status-loading";
 
             const iframe = document.createElement('iframe');
-            iframe.src = 'hls-player.html';
+            iframe.src = 'dash-player.html?cam=' + cameraId;
             iframe.allow = "fullscreen";
             iframe.style.border = '0';
 
             iframe.onload = () => {
-                const manifestUrl = `${window.location.origin}/hls/cam_${cameraId}/index.m3u8`;
-                iframe.contentWindow.postMessage({ manifestUrl, cameraId }, window.location.origin);
                 lastHeartbeat[cameraId] = Date.now();
                 statusEl.textContent = "Connected";
                 statusEl.className = "camera-status status-connected";

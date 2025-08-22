@@ -14,7 +14,7 @@ const database = require('./lib/database');
 
 /** ====== KONFIGURASI ====== */
 const RECORDINGS_DIR       = path.join(__dirname, 'recordings');
-const HLS_ROOT_DIR         = path.join(__dirname, 'public', 'hls');
+const DASH_ROOT_DIR        = path.join(__dirname, 'public', 'dash');
 const MAX_STORAGE          = 600 * 1024 * 1024 * 1024; // 600 GB total (ubah sesuai kebutuhan)
 const CLEANUP_INTERVAL_MS  = 5 * 60 * 1000;             // 5 menit (hanya untuk cleanup)
 const PERIODIC_SYNC_MS     = 30 * 60 * 1000;            // 30 menit (sync DB ←→ disk)
@@ -28,10 +28,6 @@ const POSTPROC_RETRY_BACKOFF   = 1000;        // jeda retry awal (bertumbuh)
 const DEFAULT_CONCURRENCY      = Math.min(4, Math.max(2, (os.cpus()?.length || 2) - 1));
 const QUEUE_CONCURRENCY        = DEFAULT_CONCURRENCY;   // maksimal proses ffmpeg remux berjalan bersamaan
 
-// HLS tuning
-const HLS_TIME_SECONDS         = 4;           // segment default 4 detik (lebih efisien dari 1 detik)
-const HLS_LIST_SIZE            = 5;           // jumlah segmen di playlist
-
 // Restart policy ffmpeg per kamera
 const FFMPEG_MAX_RETRY         = 10;          // maksimum restart berturut-turut
 const FFMPEG_BASE_BACKOFF_MS   = 2000;        // backoff awal 2s
@@ -39,7 +35,7 @@ const FFMPEG_MAX_BACKOFF_MS    = 60 * 1000;   // backoff maksimum 60s
 const FFMPEG_COOL_OFF_MS       = 5 * 60 * 1000; // cooldown 5 menit jika sudah melewati max retry
 
 if (!fs.existsSync(RECORDINGS_DIR)) fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
-if (!fs.existsSync(HLS_ROOT_DIR))   fs.mkdirSync(HLS_ROOT_DIR,   { recursive: true });
+if (!fs.existsSync(DASH_ROOT_DIR))   fs.mkdirSync(DASH_ROOT_DIR,   { recursive: true });
 
 /** ====== STATE ====== */
 const processes = new Map();           // camId → child_process
@@ -371,9 +367,8 @@ async function cleanupStorage() {
 }
 
 /** ====== REKAMAN (FFMPEG) & WATCHER ====== */
-function buildFfmpegArgs(camera, camRecDir, camHlsDir) {
-  const recordingTemplate = path.join(camRecDir, '%Y-%m-%d_%H-%M-%S.mp4');
-  const hlsIndexPath = path.join(camHlsDir, 'index.m3u8');
+function buildFfmpegArgs(camera, camRecDir, camDashDir) {
+  const recordingTemplate = path.join(path.relative(camDashDir, camRecDir), '%Y-%m-%d_%H-%M-%S.mp4');
 
   return [
     '-rtsp_transport','tcp',
@@ -390,15 +385,20 @@ function buildFfmpegArgs(camera, camRecDir, camHlsDir) {
     '-segment_format_options','movflags=+faststart',
     recordingTemplate,
 
-    // HLS live preview
+    // DASH live preview
     '-map','0:v:0',
     '-c:v','copy',
     '-an',
-    '-f','hls',
-    '-hls_time', String(HLS_TIME_SECONDS),
-    '-hls_list_size', String(HLS_LIST_SIZE),
-    '-hls_flags','delete_segments+append_list+independent_segments',
-    path.join(camHlsDir, 'index.m3u8')
+    '-f', 'dash',
+    '-seg_duration', '4',
+    '-use_template', '1',
+    '-use_timeline', '1',
+    '-init_seg_name', 'init-stream$RepresentationID$.m4s',
+    '-media_seg_name', 'chunk-stream$RepresentationID$-$Number%05d$.m4s',
+    '-window_size', '10',
+    '-extra_window_size', '5',
+    '-remove_at_exit', '1',
+    'index.mpd'
   ];
 }
 
@@ -411,11 +411,11 @@ function startFFmpegForCamera(camera) {
   }
 
   const camRecDir = path.join(RECORDINGS_DIR, `cam_${camId}`);
-  const camHlsDir = path.join(HLS_ROOT_DIR,   `cam_${camId}`);
+  const camDashDir = path.join(DASH_ROOT_DIR,   `cam_${camId}`);
   fs.mkdirSync(camRecDir, { recursive: true });
-  fs.mkdirSync(camHlsDir, { recursive: true });
+  fs.mkdirSync(camDashDir, { recursive: true });
 
-  const args = buildFfmpegArgs(camera, camRecDir, camHlsDir);
+  const args = buildFfmpegArgs(camera, camRecDir, camDashDir);
 
   const st = procState.get(camId) || { retries: 0, nextDelay: FFMPEG_BASE_BACKOFF_MS, coolUntil: 0 };
 
@@ -427,7 +427,7 @@ function startFFmpegForCamera(camera) {
   }
 
   console.log(`[RECORDER] Starting FFmpeg for cam ${camId}...`);
-  const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+  const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true, cwd: camDashDir });
 
   proc.stderr.on('data', (d) => {
     // TULISKAN log penting bila perlu

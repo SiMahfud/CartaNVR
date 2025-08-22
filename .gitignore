@@ -4,6 +4,7 @@
 # Runtime Data
 /recordings/
 /public/hls/
+/public/dash/
 *.db
 *.db-journal
 

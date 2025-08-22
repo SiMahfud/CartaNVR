@@ -191,12 +191,12 @@ app.get('/api/playback/:cameraId', isAuthenticated, async (req, res) => {
 });
 
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)
-app.use('/hls', isAuthenticated, express.static(path.join(__dirname, 'public', 'hls'), {
+app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 'dash'), {
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.m3u8')) {
-      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    } else if (filePath.endsWith('.ts')) {
-      res.setHeader('Content-Type', 'video/mp2t');
+    if (filePath.endsWith('.mpd')) {
+      res.setHeader('Content-Type', 'application/dash+xml');
+    } else if (filePath.endsWith('.m4s')) {
+      res.setHeader('Content-Type', 'video/iso.segment');
     }
   }
 }));

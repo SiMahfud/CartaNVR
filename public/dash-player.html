@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DASH Player</title>
+    <style>
+        video {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+</head>
+<body>
+        <video data-dashjs-player autoplay muted controls></video>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const camId = urlParams.get('cam');
+            if (camId) {
+                const video = document.querySelector('video');
+                const player = dashjs.MediaPlayer().create();
+                const url = `/dash/cam_${camId}/index.mpd`;
+                player.initialize(video, url, true);
+            } else {
+                document.body.innerHTML = '<h1>Error: Camera ID is missing. Please specify a camera with ?cam=ID</h1>';
+            }
+        });
+    </script>
+</body>
+</html>
