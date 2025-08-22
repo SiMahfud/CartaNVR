@@ -131,7 +131,7 @@ function enqueueRemuxJob(filePath) {
   if (!FASTSTART_POSTPROC) return;
   if (!filePath.endsWith('.mp4')) return;
 
-  console.log('[RECORDER] Segmen file baru tersimpan dan selesai ditulis:', filePath);
+  // console.log('[RECORDER] Segmen file baru tersimpan dan selesai ditulis:', filePath);
 
   // debounce 500ms tiap file
   clearTimeout(pendingDebounce.get(filePath));
@@ -178,7 +178,7 @@ async function processJob(job) {
     }
 
     await fixMoovAtom(filePath);
-    console.log('[FASTSTART] Sukses remux:', filePath);
+    // console.log('[FASTSTART] Sukses remux:', filePath);
 
     // Tandai fingerprint ukuran terakhir agar tidak di-remux ulang
     processedOnce.add(key);
@@ -200,7 +200,7 @@ async function processJob(job) {
           timestamp: timestamp,
           duration: duration
         });
-        console.log(`[RECORDER] Added new recording to DB: ${relativePath}`);
+        // console.log(`[RECORDER] Added new recording to DB: ${relativePath}`);
       }
     } catch (dbError) {
       console.error(`[RECORDER] Gagal menambahkan ${filePath} ke database:`, dbError);
@@ -356,7 +356,7 @@ async function cleanupStorage() {
         await fsp.unlink(oldest.file);
         await database.deleteRecordingByPath(relativePath);
         total -= oldest.size;
-        console.log('[RECORDER] Deleted old file and DB entry:', oldest.file);
+        // console.log('[RECORDER] Deleted old file and DB entry:', oldest.file);
       } catch (e) {
         console.warn('[RECORDER] Failed deleting:', oldest.file, e.message);
       }
@@ -494,7 +494,7 @@ function startDirWatcher(dirPath) {
 
     // Jika ada file sebelumnya (bukan file pertama yang dibuat)
     if (previousFile && previousFile !== newFile) {
-      console.log(`[RECORDER] File baru terdeteksi: ${path.basename(newFile)}. Memproses file sebelumnya: ${path.basename(previousFile)}`);
+      // console.log(`[RECORDER] File baru terdeteksi: ${path.basename(newFile)}. Memproses file sebelumnya: ${path.basename(previousFile)}`);
       // Jalankan job untuk file yang sudah selesai ditulis
       enqueueRemuxJob(previousFile);
     }

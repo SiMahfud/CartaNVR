@@ -3,15 +3,21 @@
 <head>
     <title>DASH Player</title>
     <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
         video {
             width: 100%;
-            height: auto;
+            height: 100%;
+            display: block;
         }
     </style>
     <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
 </head>
 <body>
-        <video data-dashjs-player autoplay muted controls></video>
+        <video data-dashjs-player autoplay muted></video>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const urlParams = new URLSearchParams(window.location.search);
