@@ -251,6 +251,7 @@ function fixMoovAtom(filePath) {
 /** ====== SYNC FILE SYSTEM ↔ DB ====== */
 async function syncExistingFilesOnce() {
   console.log('[RECORDER] Running one-time sync for existing files...');
+  let deletedCount = 0;
   try {
     const cameras = await database.getAllCameras();
     for (const camera of cameras) {
@@ -267,9 +268,8 @@ async function syncExistingFilesOnce() {
         const relativePath = `/recordings/cam_${camId}/${file}`;
         if (existingPaths.has(relativePath)) continue;
 
+        const filePath = path.join(camDir, file);
         try {
-          console.log(`[RECORDER-SYNC] Found unsynced file, processing: ${file}`);
-          const filePath = path.join(camDir, file);
           const duration = await getVideoDuration(filePath);
           const timestamp = parseTimestampFromNameOrMtime(filePath);
 
@@ -280,14 +280,26 @@ async function syncExistingFilesOnce() {
               timestamp,
               duration
             });
+          } else {
+            // Jika durasi 0 atau timestamp tidak valid, anggap korup
+            throw new Error('Invalid metadata (duration or timestamp)');
           }
         } catch (e) {
-          console.warn(`[RECORDER-SYNC] Failed to sync file ${file}:`, e.message);
+          deletedCount++;
+          try {
+            await fsp.unlink(filePath);
+          } catch (delErr) {
+            console.error(`[RECORDER-SYNC] Failed to delete corrupt file ${file}:`, delErr.message);
+          }
         }
       }
     }
   } catch (e) {
     console.error('[RECORDER] Error during one-time sync:', e);
+  }
+
+  if (deletedCount > 0) {
+    console.warn(`[RECORDER-SYNC] Deleted ${deletedCount} corrupt or incomplete file(s).`);
   }
   console.log('[RECORDER] One-time sync finished.');
 }
@@ -429,8 +441,18 @@ function startFFmpegForCamera(camera) {
   console.log(`[RECORDER] Starting FFmpeg for cam ${camId}...`);
   const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true, cwd: camDashDir });
 
+  // --- Watchdog ---
+  const resetWatchdog = () => {
+    clearTimeout(watchdogTimers.get(camId));
+    const timer = setTimeout(() => {
+      console.warn(`[RECORDER] FFmpeg for cam ${camId} appears to be stuck. Killing process.`);
+      proc.kill();
+    }, FFMPEG_WATCHDOG_TIMEOUT_MS);
+    watchdogTimers.set(camId, timer);
+  };
+
   proc.stderr.on('data', (d) => {
-    // TULISKAN log penting bila perlu
+    resetWatchdog(); // Reset watchdog on any output
     const line = d.toString();
     if (/(Connection|timed out|Invalid data|error)/i.test(line)) {
       console.warn(`[FFMPEG ${camId}] ${line.trim()}`);
@@ -438,6 +460,9 @@ function startFFmpegForCamera(camera) {
   });
 
   proc.on('close', (code, signal) => {
+    clearTimeout(watchdogTimers.get(camId));
+    watchdogTimers.delete(camId);
+
     console.warn(`[RECORDER] FFmpeg for cam ${camId} exited (code=${code}, signal=${signal}).`);
     processes.delete(camId);
 
@@ -462,6 +487,7 @@ function startFFmpegForCamera(camera) {
     st.nextDelay = FFMPEG_BASE_BACKOFF_MS;
     st.coolUntil = 0;
     procState.set(camId, st);
+    resetWatchdog(); // Start watchdog on spawn
   });
 
   processes.set(camId, proc);
