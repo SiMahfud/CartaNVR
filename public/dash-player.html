@@ -17,8 +17,23 @@
     <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
 </head>
 <body>
-        <video data-dashjs-player autoplay muted></video>
+        <video controls data-dashjs-player autoplay muted></video>
     <script>
+        const video = document.querySelector('video');
+        
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) return;
+            if (event.data.type === 'requestFullscreen' && video) {
+                if (video.requestFullscreen) {
+                    video.requestFullscreen();
+                } else if (video.webkitRequestFullscreen) { /* Safari */
+                    video.webkitRequestFullscreen();
+                } else if (video.msRequestFullscreen) { /* IE11 */
+                    video.msRequestFullscreen();
+                }
+            }
+        });
+
         document.addEventListener("DOMContentLoaded", function () {
             const urlParams = new URLSearchParams(window.location.search);
             const camId = urlParams.get('cam');

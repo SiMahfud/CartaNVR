@@ -33,6 +33,7 @@ const FFMPEG_MAX_RETRY         = 10;          // maksimum restart berturut-turut
 const FFMPEG_BASE_BACKOFF_MS   = 2000;        // backoff awal 2s
 const FFMPEG_MAX_BACKOFF_MS    = 60 * 1000;   // backoff maksimum 60s
 const FFMPEG_COOL_OFF_MS       = 5 * 60 * 1000; // cooldown 5 menit jika sudah melewati max retry
+const FFMPEG_WATCHDOG_TIMEOUT_MS = 30 * 1000;   // Timeout 30s jika ffmpeg tidak ada output
 
 if (!fs.existsSync(RECORDINGS_DIR)) fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
 if (!fs.existsSync(DASH_ROOT_DIR))   fs.mkdirSync(DASH_ROOT_DIR,   { recursive: true });
@@ -43,6 +44,7 @@ const procState = new Map();           // camId → { retries, nextDelay, coolUn
 const intervals = new Map();           // name → setInterval ref
 const activeWatchers = new Map();      // dir → chokidar FSWatcher
 const lastFilePerDir = new Map();      // dirPath → last detected filePath (UNTUK LOGIKA BARU)
+const watchdogTimers = new Map();      // camId → watchdog setTimeout ref
 
 /** ====== UTIL ====== */
 const now = () => Date.now();
