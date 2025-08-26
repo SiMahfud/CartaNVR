@@ -250,6 +250,7 @@
                     card.style.display = '';
                 } else {
                     card.style.display = 'none';
+                    stopPlayer(cardCameraId);
                 }
             });
             observer.disconnect();
