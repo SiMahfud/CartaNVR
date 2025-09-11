@@ -2,9 +2,10 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const database = require('./lib/database');
 const onvifScanner = require('./lib/onvif-scanner');
+const { sanitizeCamId } = require('./lib/utils');
 
 // Modul untuk Autentikasi
 const session = require('express-session');
@@ -135,6 +136,7 @@ app.post('/api/scan', isAuthenticated, async (req, res) => {
   }
 });
 
+// === Rute untuk Kamera ===
 app.get('/api/cameras', isAuthenticated, async (req, res) => {
   try {
     const cameras = await database.getAllCameras();
@@ -170,6 +172,46 @@ app.delete('/api/cameras/:id', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Delete failed:', error);
     res.status(500).json({ error: 'Failed to delete camera' });
+  }
+});
+
+// === Rute untuk Storage ===
+
+app.get('/api/storages', isAuthenticated, async (req, res) => {
+  try {
+    const storages = await database.getAllStorages();
+    res.json(storages);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve storages' });
+  }
+});
+
+app.post('/api/storages', isAuthenticated, async (req, res) => {
+  try {
+    const newStorage = await database.addStorage(req.body);
+    res.status(201).json(newStorage);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add storage' });
+  }
+});
+
+app.put('/api/storages/:id', isAuthenticated, async (req, res) => {
+  try {
+    const updatedStorage = await database.updateStorage(req.params.id, req.body);
+    res.json(updatedStorage);
+  } catch (error) {
+    console.error('Update failed:', error);
+    res.status(500).json({ error: 'Failed to update storage' });
+  }
+});
+
+app.delete('/api/storages/:id', isAuthenticated, async (req, res) => {
+  try {
+    await database.deleteStorage(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    console.error('Delete failed:', error);
+    res.status(500).json({ error: 'Failed to delete storage' });
   }
 });
 
@@ -224,6 +266,67 @@ app.post('/api/config', isAuthenticated, async (req, res) => {
   }
 });
 
+app.get('/api/browse', isAuthenticated, (req, res) => {
+    const isWindows = process.platform === 'win32';
+    let currentPath = req.query.path;
+    console.log(`Browsing path: ${currentPath}`);
+
+    if (!currentPath) {
+        if (isWindows) {
+            console.log('No path, listing drives (Windows)');
+            exec('wmic logicaldisk get name', (err, stdout) => {
+                if (err) {
+                    console.error('Error getting drives:', err);
+                    return res.status(500).json({ error: 'Failed to get drives' });
+                }
+                const drives = stdout.split('\r\n').slice(1).map(line => line.trim()).filter(line => line.length > 0).map(drive => ({
+                    name: drive,
+                    path: drive + '\\'
+                }));
+                res.json({
+                    currentPath: 'Computer',
+                    parentDir: null,
+                    isRoot: true,
+                    directories: drives
+                });
+            });
+            return;
+        } else {
+            console.log('No path, starting at / (Linux/macOS)');
+            currentPath = '/';
+        }
+    }
+
+    try {
+        console.log(`Reading directory: ${currentPath}`);
+        const files = fs.readdirSync(currentPath, { withFileTypes: true });
+        const directories = files
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => ({
+                name: dirent.name,
+                path: path.join(currentPath, dirent.name)
+            }));
+
+        const parent = path.resolve(currentPath, '..');
+        const isDriveRoot = isWindows && /^[A-Z]:\\?$/.test(currentPath);
+
+        res.json({
+            currentPath,
+            parentDir: isDriveRoot ? '' : parent,
+            isRoot: false,
+            directories
+        });
+    } catch (error) {
+        console.error('Error browsing path:', error);
+        if (error.code === 'ENOENT') {
+            console.log('Path not found, redirecting to root');
+            res.redirect(`/api/browse`);
+        } else {
+            res.status(500).json({ error: 'Failed to browse path' });
+        }
+    }
+});
+
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)
 app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 'dash'), {
   setHeaders: (res, filePath) => {
@@ -234,7 +337,26 @@ app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 
     }
   }
 }));
-app.use('/recordings', isAuthenticated, express.static(path.join(__dirname, 'recordings')));
+
+app.get('/recordings/:cameraId/:filename', isAuthenticated, async (req, res) => {
+    try {
+        const { cameraId, filename } = req.params;
+        const camId = sanitizeCamId(cameraId.replace('cam_', ''));
+        const camera = await database.getCameraById(camId);
+        if (!camera || !camera.storage_path) {
+            return res.status(404).send('Camera or storage not found');
+        }
+        const filePath = path.join(camera.storage_path, `cam_${camId}`, filename);
+        if (fs.existsSync(filePath)) {
+            res.sendFile(filePath);
+        } else {
+            res.status(404).send('File not found');
+        }
+    } catch (error) {
+        console.error('Error serving recording:', error);
+        res.status(500).send('Server error');
+    }
+});
 
 // === Mulai Server & Buat Admin Default ===
 const recorder = require('./recorder');

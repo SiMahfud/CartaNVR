@@ -90,7 +90,7 @@
             <div class="table-responsive">
               <table class="table table-striped table-hover table-sm align-middle">
                 <thead class="table-light">
-                  <tr><th>ID</th><th>Name</th><th>IP Address</th><th>RTSP URL</th><th>Actions</th></tr>
+                  <tr><th>ID</th><th>Name</th><th>IP Address</th><th>RTSP URL</th><th>Storage</th><th>Actions</th></tr>
                 </thead>
                 <tbody id="saved-cameras"></tbody>
               </table>
@@ -119,6 +119,10 @@
             <label for="edit-camera-rtsp" class="form-label">RTSP URL</label>
             <input type="text" class="form-control" id="edit-camera-rtsp">
           </div>
+          <div class="mb-3">
+            <label for="edit-camera-storage" class="form-label">Storage Location</label>
+            <select class="form-select" id="edit-camera-storage"></select>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -138,8 +142,12 @@
       const savedCamerasBody = document.getElementById('saved-cameras');
       const editModal = new bootstrap.Modal(document.getElementById('editCameraModal'));
       const saveEditBtn = document.getElementById('save-edit-btn');
+      const storageSelect = document.getElementById('edit-camera-storage');
       const darkToggle = document.getElementById('dark-toggle');
       const body = document.body;
+
+      let cameras = [];
+      let storages = [];
 
       // --- Dark Mode Logic ---
       const setCookie = (name, value, days) => {
@@ -186,11 +194,27 @@
       applyTheme();
       // --- End Dark Mode Logic ---
 
+      // Fetch storages
+      async function fetchStorages() {
+        try {
+            const response = await fetch('/api/storages');
+            storages = await response.json();
+            storageSelect.innerHTML = '<option value="">None</option>';
+            storages.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = s.name;
+                storageSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error fetching storages:', error);
+        }
+      }
 
       // Load saved cameras
       async function fetchSavedCameras() {
         const response = await fetch('/api/cameras');
-        const cameras = await response.json();
+        cameras = await response.json();
         savedCamerasBody.innerHTML = '';
         cameras.forEach(cam => {
           const row = document.createElement('tr');
@@ -199,8 +223,9 @@
             <td>${cam.name}</td>
             <td>${cam.ip_address}</td>
             <td>${cam.rtsp_url}</td>
+            <td>${cam.storage_name || '<i>None</i>'}</td>
             <td>
-              <button class="btn btn-sm btn-outline-warning edit-btn" data-id="${cam.id}" data-name="${cam.name}" data-rtsp="${cam.rtsp_url}"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-outline-warning edit-btn" data-id="${cam.id}"><i class="bi bi-pencil-square"></i></button>
               <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${cam.id}"><i class="bi bi-trash"></i></button>
             </td>
           `;
@@ -221,7 +246,8 @@
         scanResultsBody.innerHTML = '';
 
         try {
-          const savedCameras = await fetch('/api/cameras').then(res => res.json());
+          const savedCamerasRes = await fetch('/api/cameras');
+          const savedCameras = await savedCamerasRes.json();
           const savedIps = new Set(savedCameras.map(cam => cam.ip_address));
 
           const response = await fetch('/api/scan', {
@@ -291,7 +317,7 @@
           const response = await fetch('/api/cameras', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, ip_address, rtsp_url })
+            body: JSON.stringify({ name, ip_address, rtsp_url, storage_id: null })
           });
 
           if (response.ok) {
@@ -324,10 +350,14 @@
         }
 
         if (target.classList.contains('edit-btn')) {
-          document.getElementById('edit-camera-id').value = id;
-          document.getElementById('edit-camera-name').value = target.dataset.name;
-          document.getElementById('edit-camera-rtsp').value = target.dataset.rtsp;
-          editModal.show();
+          const camera = cameras.find(c => c.id == id);
+          if (camera) {
+            document.getElementById('edit-camera-id').value = id;
+            document.getElementById('edit-camera-name').value = camera.name;
+            document.getElementById('edit-camera-rtsp').value = camera.rtsp_url;
+            storageSelect.value = camera.storage_id || '';
+            editModal.show();
+          }
         }
       });
 
@@ -336,11 +366,12 @@
         const id = document.getElementById('edit-camera-id').value;
         const name = document.getElementById('edit-camera-name').value;
         const rtsp_url = document.getElementById('edit-camera-rtsp').value;
+        const storage_id = storageSelect.value ? parseInt(storageSelect.value, 10) : null;
 
         const response = await fetch(`/api/cameras/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, rtsp_url })
+          body: JSON.stringify({ name, rtsp_url, storage_id })
         });
 
         if (response.ok) {
@@ -351,6 +382,7 @@
         }
       });
 
+      fetchStorages();
       fetchSavedCameras();
     });
   </script>

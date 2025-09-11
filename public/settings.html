@@ -29,6 +29,18 @@
         .form-text {
             font-size: 0.875em;
         }
+        #directory-browser-modal .list-group-item, #storage-list .list-group-item span {
+            cursor: pointer;
+        }
+        #directory-browser-modal .list-group-item:hover {
+            background-color: #f0f0f0;
+        }
+        body.dark #directory-browser-modal .list-group-item:hover {
+            background-color: #3a3f44;
+        }
+        body.dark .modal-content {
+            background-color: #2c2f33;
+        }
         /* Dark mode */
         body.dark { background: #212529; color: #f8f9fa; }
         body.dark .card { background-color: #2c2f33; }
@@ -72,21 +84,22 @@
             <div class="card-body">
                 <form id="settings-form">
                     <fieldset>
-                        <legend>Storage</legend>
-                        <div class="mb-3">
-                            <label for="MAX_STORAGE" class="form-label">Max Storage (GB)</label>
-                            <input type="number" class="form-control" id="MAX_STORAGE" name="MAX_STORAGE">
-                            <div class="form-text">The maximum storage to use for recordings in GB.</div>
+                        <legend>Storage Locations</legend>
+                        <div id="storage-list" class="list-group mb-3"></div>
+                        <button type="button" class="btn btn-primary" id="add-storage-btn">Add Storage</button>
+                    </fieldset>
+                    <hr>
+                    <fieldset>
+                        <legend>General Storage Settings</legend>
+                         <div class="mb-3">
+                            <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval (minutes)</label>
+                            <input type="number" class="form-control" id="CLEANUP_INTERVAL_MS" name="CLEANUP_INTERVAL_MS">
+                            <div class="form-text">How often to check for old recordings to delete (in minutes).</div>
                         </div>
                     </fieldset>
                     <hr>
                     <fieldset>
                         <legend>Intervals</legend>
-                        <div class="mb-3">
-                            <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval (minutes)</label>
-                            <input type="number" class="form-control" id="CLEANUP_INTERVAL_MS" name="CLEANUP_INTERVAL_MS">
-                            <div class="form-text">How often to check for old recordings to delete (in minutes).</div>
-                        </div>
                         <div class="mb-3">
                             <label for="PERIODIC_SYNC_MS" class="form-label">Periodic Sync (minutes)</label>
                             <input type="number" class="form-control" id="PERIODIC_SYNC_MS" name="PERIODIC_SYNC_MS">
@@ -151,43 +164,257 @@
         </div>
     </div>
 
+    <!-- Storage Modal -->
+    <div class="modal fade" id="storage-modal" tabindex="-1" aria-labelledby="storageModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="storageModalLabel">Storage Location</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="storage-form">
+                        <input type="hidden" id="storage-id">
+                        <div class="mb-3">
+                            <label for="storage-name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="storage-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="storage-path" class="form-label">Path</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="storage-path" required>
+                                <button class="btn btn-outline-secondary" type="button" id="browse-storage-path-btn">Browse</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="storage-max-gb" class="form-label">Max Size (GB)</label>
+                            <input type="number" class="form-control" id="storage-max-gb" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-storage-btn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Directory Browser Modal -->
+    <div class="modal fade" id="directory-browser-modal" tabindex="-1" aria-labelledby="directoryBrowserLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="directoryBrowserLabel">Browse Directories</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Current Path: <strong id="current-path"></strong></p>
+                    <div class="list-group" id="directory-list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="select-dir-btn">Select Directory</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            const form = document.getElementById('settings-form');
+            const settingsForm = document.getElementById('settings-form');
+            const storageListEl = document.getElementById('storage-list');
+            const addStorageBtn = document.getElementById('add-storage-btn');
+            
+            const storageModal = new bootstrap.Modal(document.getElementById('storage-modal'));
+            const storageForm = document.getElementById('storage-form');
+            const storageIdInput = document.getElementById('storage-id');
+            const storageNameInput = document.getElementById('storage-name');
+            const storagePathInput = document.getElementById('storage-path');
+            const storageMaxGbInput = document.getElementById('storage-max-gb');
+            const saveStorageBtn = document.getElementById('save-storage-btn');
 
-            // Fetch and populate config
-            try {
-                const response = await fetch('/api/config');
-                const config = await response.json();
-                
-                document.getElementById('MAX_STORAGE').value = config.MAX_STORAGE / (1024 * 1024 * 1024); // Convert to GB
-                document.getElementById('CLEANUP_INTERVAL_MS').value = config.CLEANUP_INTERVAL_MS / (60 * 1000); // Convert to minutes
-                document.getElementById('PERIODIC_SYNC_MS').value = config.PERIODIC_SYNC_MS / (60 * 1000); // Convert to minutes
-                document.getElementById('FASTSTART_POSTPROC').checked = config.FASTSTART_POSTPROC;
-                document.getElementById('POSTPROC_DELAY_MS').value = config.POSTPROC_DELAY_MS;
-                document.getElementById('POSTPROC_STABLE_MS').value = config.POSTPROC_STABLE_MS;
-                document.getElementById('POSTPROC_MAX_RETRY').value = config.POSTPROC_MAX_RETRY;
-                document.getElementById('POSTPROC_RETRY_BACKOFF').value = config.POSTPROC_RETRY_BACKOFF;
-                document.getElementById('QUEUE_CONCURRENCY').value = config.QUEUE_CONCURRENCY;
-                document.getElementById('FFMPEG_MAX_RETRY').value = config.FFMPEG_MAX_RETRY;
-                document.getElementById('FFMPEG_BASE_BACKOFF_MS').value = config.FFMPEG_BASE_BACKOFF_MS;
-                document.getElementById('FFMPEG_MAX_BACKOFF_MS').value = config.FFMPEG_MAX_BACKOFF_MS;
-                document.getElementById('FFMPEG_COOL_OFF_MS').value = config.FFMPEG_COOL_OFF_MS;
-                document.getElementById('FFMPEG_WATCHDOG_TIMEOUT_MS').value = config.FFMPEG_WATCHDOG_TIMEOUT_MS;
+            const dirModal = new bootstrap.Modal(document.getElementById('directory-browser-modal'));
+            const currentPathEl = document.getElementById('current-path');
+            const directoryListEl = document.getElementById('directory-list');
+            const selectDirBtn = document.getElementById('select-dir-btn');
+            const browseStoragePathBtn = document.getElementById('browse-storage-path-btn');
 
-            } catch (error) {
-                console.error('Error fetching config:', error);
-                alert('Could not load settings.');
-            }
+            let currentBrowserPath = null;
+            let storages = [];
 
-            // Handle form submission
-            form.addEventListener('submit', async (event) => {
+            // --- Storage Management Logic ---
+            const renderStorages = () => {
+                storageListEl.innerHTML = '';
+                if (storages.length === 0) {
+                    storageListEl.innerHTML = '<p class="text-muted">No storage locations defined.</p>';
+                    return;
+                }
+                storages.forEach(storage => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <div>
+                            <h6 class="mb-1">${storage.name}</h6>
+                            <small class="text-muted">${storage.path} (${storage.max_gb} GB)</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2 edit-storage-btn" data-id="${storage.id}"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger delete-storage-btn" data-id="${storage.id}"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                    storageListEl.appendChild(item);
+                });
+            };
+
+            const loadStorages = async () => {
+                try {
+                    const response = await fetch('/api/storages');
+                    storages = await response.json();
+                    renderStorages();
+                } catch (error) {
+                    console.error('Error loading storages:', error);
+                }
+            };
+
+            addStorageBtn.addEventListener('click', () => {
+                storageForm.reset();
+                storageIdInput.value = '';
+                storageModal.show();
+            });
+
+            storageListEl.addEventListener('click', e => {
+                if (e.target.closest('.edit-storage-btn')) {
+                    const id = e.target.closest('.edit-storage-btn').dataset.id;
+                    const storage = storages.find(s => s.id == id);
+                    if (storage) {
+                        storageIdInput.value = storage.id;
+                        storageNameInput.value = storage.name;
+                        storagePathInput.value = storage.path;
+                        storageMaxGbInput.value = storage.max_gb;
+                        storageModal.show();
+                    }
+                } else if (e.target.closest('.delete-storage-btn')) {
+                    const id = e.target.closest('.delete-storage-btn').dataset.id;
+                    if (confirm('Are you sure you want to delete this storage location?')) {
+                        fetch(`/api/storages/${id}`, { method: 'DELETE' }).then(loadStorages);
+                    }
+                }
+            });
+
+            saveStorageBtn.addEventListener('click', async () => {
+                const id = storageIdInput.value;
+                const storageData = {
+                    name: storageNameInput.value,
+                    path: storagePathInput.value,
+                    max_gb: parseInt(storageMaxGbInput.value, 10)
+                };
+
+                const url = id ? `/api/storages/${id}` : '/api/storages';
+                const method = id ? 'PUT' : 'POST';
+
+                try {
+                    const response = await fetch(url, {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(storageData)
+                    });
+                    if (response.ok) {
+                        storageModal.hide();
+                        loadStorages();
+                    } else {
+                        alert('Failed to save storage');
+                    }
+                } catch (error) {
+                    console.error('Error saving storage:', error);
+                }
+            });
+
+            // --- Directory Browser Logic ---
+            const loadDirectories = async (path) => {
+                try {
+                    const response = await fetch(`/api/browse?path=${encodeURIComponent(path || '')}`);
+                    if (!response.ok) throw new Error('Failed to load directories');
+                    const data = await response.json();
+                    
+                    currentBrowserPath = data.currentPath;
+                    currentPathEl.textContent = data.currentPath;
+                    directoryListEl.innerHTML = '';
+
+                    if (data.parentDir !== null) {
+                        const parentItem = document.createElement('a');
+                        parentItem.href = '#';
+                        parentItem.className = 'list-group-item list-group-item-action';
+                        parentItem.textContent = '../';
+                        parentItem.dataset.path = data.parentDir;
+                        directoryListEl.appendChild(parentItem);
+                    }
+
+                    data.directories.forEach(dir => {
+                        const item = document.createElement('a');
+                        item.href = '#';
+                        item.className = 'list-group-item list-group-item-action';
+                        item.textContent = dir.name;
+                        item.dataset.path = dir.path;
+                        directoryListEl.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error('Error loading directories:', error);
+                }
+            };
+
+            browseStoragePathBtn.addEventListener('click', () => {
+                const initialPath = storagePathInput.value || '';
+                loadDirectories(initialPath);
+                dirModal.show();
+            });
+
+            directoryListEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = e.target;
+                if (target.tagName === 'A' && target.dataset.path !== undefined) {
+                    loadDirectories(target.dataset.path);
+                }
+            });
+
+            selectDirBtn.addEventListener('click', () => {
+                if (currentBrowserPath !== 'Computer') {
+                    storagePathInput.value = currentBrowserPath;
+                }
+                dirModal.hide();
+            });
+
+            // --- General Settings Form Logic ---
+            const loadGeneralSettings = async () => {
+                try {
+                    const response = await fetch('/api/config');
+                    const config = await response.json();
+                    document.getElementById('CLEANUP_INTERVAL_MS').value = config.CLEANUP_INTERVAL_MS / (60 * 1000);
+                    document.getElementById('PERIODIC_SYNC_MS').value = config.PERIODIC_SYNC_MS / (60 * 1000);
+                    document.getElementById('FASTSTART_POSTPROC').checked = config.FASTSTART_POSTPROC;
+                    document.getElementById('POSTPROC_DELAY_MS').value = config.POSTPROC_DELAY_MS;
+                    document.getElementById('POSTPROC_STABLE_MS').value = config.POSTPROC_STABLE_MS;
+                    document.getElementById('POSTPROC_MAX_RETRY').value = config.POSTPROC_MAX_RETRY;
+                    document.getElementById('POSTPROC_RETRY_BACKOFF').value = config.POSTPROC_RETRY_BACKOFF;
+                    document.getElementById('QUEUE_CONCURRENCY').value = config.QUEUE_CONCURRENCY;
+                    document.getElementById('FFMPEG_MAX_RETRY').value = config.FFMPEG_MAX_RETRY;
+                    document.getElementById('FFMPEG_BASE_BACKOFF_MS').value = config.FFMPEG_BASE_BACKOFF_MS;
+                    document.getElementById('FFMPEG_MAX_BACKOFF_MS').value = config.FFMPEG_MAX_BACKOFF_MS;
+                    document.getElementById('FFMPEG_COOL_OFF_MS').value = config.FFMPEG_COOL_OFF_MS;
+                    document.getElementById('FFMPEG_WATCHDOG_TIMEOUT_MS').value = config.FFMPEG_WATCHDOG_TIMEOUT_MS;
+                } catch (error) {
+                    console.error('Error fetching config:', error);
+                }
+            };
+
+            settingsForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const formData = new FormData(form);
+                const formData = new FormData(settingsForm);
                 const newConfig = {};
                 for (const [key, value] of formData.entries()) {
-                    const input = form.elements[key];
+                    const input = settingsForm.elements[key];
                     if (input.type === 'checkbox') {
                         newConfig[key] = input.checked;
                     } else if (input.type === 'number') {
@@ -197,30 +424,28 @@
                     }
                 }
 
-                // Convert values back to original units
-                newConfig.MAX_STORAGE = newConfig.MAX_STORAGE * 1024 * 1024 * 1024;
                 newConfig.CLEANUP_INTERVAL_MS = newConfig.CLEANUP_INTERVAL_MS * 60 * 1000;
                 newConfig.PERIODIC_SYNC_MS = newConfig.PERIODIC_SYNC_MS * 60 * 1000;
 
                 try {
                     const response = await fetch('/api/config', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(newConfig)
                     });
                     if (response.ok) {
                         alert('Settings saved successfully!');
                     } else {
-                        const errorText = await response.text();
-                        alert(`Error saving settings: ${errorText}`);
+                        alert(`Error saving settings: ${await response.text()}`);
                     }
                 } catch (error) {
                     console.error('Error saving config:', error);
-                    alert('An error occurred while saving settings.');
                 }
             });
+
+            // Initial Load
+            loadStorages();
+            loadGeneralSettings();
 
             // Dark mode toggle
             const darkToggle = document.getElementById('dark-toggle');
