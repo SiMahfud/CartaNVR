@@ -116,6 +116,10 @@ app.get('/playback', isAuthenticated, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'playback.html'));
 });
 
+app.get('/settings', isAuthenticated, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'settings.html'));
+});
+
 // Lindungi semua API dengan middleware isAuthenticated
 app.post('/api/scan', isAuthenticated, async (req, res) => {
   try {
@@ -187,6 +191,36 @@ app.get('/api/playback/:cameraId', isAuthenticated, async (req, res) => {
   } catch (err) {
     console.error("Server error fetching playback from DB:", err);
     res.status(500).json({ error: 'Failed to read recordings from database' });
+  }
+});
+
+app.get('/api/config', isAuthenticated, (req, res) => {
+  delete require.cache[require.resolve('./lib/config')];
+  const config = require('./lib/config');
+  res.json(config);
+});
+
+app.post('/api/config', isAuthenticated, async (req, res) => {
+  try {
+    const newConfig = req.body;
+    const configPath = path.join(__dirname, 'lib', 'config.json');
+
+    let existingConfig = {};
+    if (fs.existsSync(configPath)) {
+      const rawData = fs.readFileSync(configPath);
+      existingConfig = JSON.parse(rawData);
+    }
+
+    const updatedConfig = { ...existingConfig, ...newConfig };
+
+    fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
+    
+    delete require.cache[require.resolve('./lib/config')];
+
+    res.status(200).json({ message: 'Config updated successfully' });
+  } catch (error) {
+    console.error('Failed to save config:', error);
+    res.status(500).json({ error: 'Failed to save config' });
   }
 });
 

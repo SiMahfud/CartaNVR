@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVR Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f1f3f6;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #212529, #343a40);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .form-text {
+            font-size: 0.875em;
+        }
+        /* Dark mode */
+        body.dark { background: #212529; color: #f8f9fa; }
+        body.dark .card { background-color: #2c2f33; }
+        body.dark .form-control { background-color: #343a40; color: #f8f9fa; border-color: #495057; }
+        body.dark .form-text { color: #adb5bd; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+          <a class="navbar-brand fw-bold" href="/">📹 NVR</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+              <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+              <li class="nav-item"><a class="nav-link" href="/manage-cameras">Camera Manager</a></li>
+              <li class="nav-item"><a class="nav-link" href="/playback">Playback</a></li>
+              <li class="nav-item"><a class="nav-link active" aria-current="page" href="/settings">Settings</a></li>
+            </ul>
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <button id="dark-toggle" class="btn btn-outline-light">
+                  <i class="bi bi-moon-fill"></i>
+                </button>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/logout">Logout</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="card">
+            <div class="card-header">
+                <h2>Settings</h2>
+            </div>
+            <div class="card-body">
+                <form id="settings-form">
+                    <fieldset>
+                        <legend>Storage</legend>
+                        <div class="mb-3">
+                            <label for="MAX_STORAGE" class="form-label">Max Storage (GB)</label>
+                            <input type="number" class="form-control" id="MAX_STORAGE" name="MAX_STORAGE">
+                            <div class="form-text">The maximum storage to use for recordings in GB.</div>
+                        </div>
+                    </fieldset>
+                    <hr>
+                    <fieldset>
+                        <legend>Intervals</legend>
+                        <div class="mb-3">
+                            <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval (minutes)</label>
+                            <input type="number" class="form-control" id="CLEANUP_INTERVAL_MS" name="CLEANUP_INTERVAL_MS">
+                            <div class="form-text">How often to check for old recordings to delete (in minutes).</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="PERIODIC_SYNC_MS" class="form-label">Periodic Sync (minutes)</label>
+                            <input type="number" class="form-control" id="PERIODIC_SYNC_MS" name="PERIODIC_SYNC_MS">
+                            <div class="form-text">How often to sync camera streams (in minutes).</div>
+                        </div>
+                    </fieldset>
+                    <hr>
+                    <fieldset>
+                        <legend>Post-processing</legend>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="FASTSTART_POSTPROC" name="FASTSTART_POSTPROC">
+                            <label class="form-check-label" for="FASTSTART_POSTPROC">Enable Faststart Post-processing</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="POSTPROC_DELAY_MS" class="form-label">Post-processing Delay (ms)</label>
+                            <input type="number" class="form-control" id="POSTPROC_DELAY_MS" name="POSTPROC_DELAY_MS">
+                        </div>
+                        <div class="mb-3">
+                            <label for="POSTPROC_STABLE_MS" class="form-label">Post-processing Stable Time (ms)</label>
+                            <input type="number" class="form-control" id="POSTPROC_STABLE_MS" name="POSTPROC_STABLE_MS">
+                        </div>
+                        <div class="mb-3">
+                            <label for="POSTPROC_MAX_RETRY" class="form-label">Post-processing Max Retries</label>
+                            <input type="number" class="form-control" id="POSTPROC_MAX_RETRY" name="POSTPROC_MAX_RETRY">
+                        </div>
+                        <div class="mb-3">
+                            <label for="POSTPROC_RETRY_BACKOFF" class="form-label">Post-processing Retry Backoff (ms)</label>
+                            <input type="number" class="form-control" id="POSTPROC_RETRY_BACKOFF" name="POSTPROC_RETRY_BACKOFF">
+                        </div>
+                        <div class="mb-3">
+                            <label for="QUEUE_CONCURRENCY" class="form-label">Queue Concurrency</label>
+                            <input type="number" class="form-control" id="QUEUE_CONCURRENCY" name="QUEUE_CONCURRENCY">
+                        </div>
+                    </fieldset>
+                    <hr>
+                    <fieldset>
+                        <legend>FFmpeg</legend>
+                        <div class="mb-3">
+                            <label for="FFMPEG_MAX_RETRY" class="form-label">FFmpeg Max Retry</label>
+                            <input type="number" class="form-control" id="FFMPEG_MAX_RETRY" name="FFMPEG_MAX_RETRY">
+                        </div>
+                        <div class="mb-3">
+                            <label for="FFMPEG_BASE_BACKOFF_MS" class="form-label">FFmpeg Base Backoff (ms)</label>
+                            <input type="number" class="form-control" id="FFMPEG_BASE_BACKOFF_MS" name="FFMPEG_BASE_BACKOFF_MS">
+                        </div>
+                        <div class="mb-3">
+                            <label for="FFMPEG_MAX_BACKOFF_MS" class="form-label">FFmpeg Max Backoff (ms)</label>
+                            <input type="number" class="form-control" id="FFMPEG_MAX_BACKOFF_MS" name="FFMPEG_MAX_BACKOFF_MS">
+                        </div>
+                        <div class="mb-3">
+                            <label for="FFMPEG_COOL_OFF_MS" class="form-label">FFmpeg Cool Off (ms)</label>
+                            <input type="number" class="form-control" id="FFMPEG_COOL_OFF_MS" name="FFMPEG_COOL_OFF_MS">
+                        </div>
+                        <div class="mb-3">
+                            <label for="FFMPEG_WATCHDOG_TIMEOUT_MS" class="form-label">FFmpeg Watchdog Timeout (ms)</label>
+                            <input type="number" class="form-control" id="FFMPEG_WATCHDOG_TIMEOUT_MS" name="FFMPEG_WATCHDOG_TIMEOUT_MS">
+                        </div>
+                    </fieldset>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const form = document.getElementById('settings-form');
+
+            // Fetch and populate config
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                document.getElementById('MAX_STORAGE').value = config.MAX_STORAGE / (1024 * 1024 * 1024); // Convert to GB
+                document.getElementById('CLEANUP_INTERVAL_MS').value = config.CLEANUP_INTERVAL_MS / (60 * 1000); // Convert to minutes
+                document.getElementById('PERIODIC_SYNC_MS').value = config.PERIODIC_SYNC_MS / (60 * 1000); // Convert to minutes
+                document.getElementById('FASTSTART_POSTPROC').checked = config.FASTSTART_POSTPROC;
+                document.getElementById('POSTPROC_DELAY_MS').value = config.POSTPROC_DELAY_MS;
+                document.getElementById('POSTPROC_STABLE_MS').value = config.POSTPROC_STABLE_MS;
+                document.getElementById('POSTPROC_MAX_RETRY').value = config.POSTPROC_MAX_RETRY;
+                document.getElementById('POSTPROC_RETRY_BACKOFF').value = config.POSTPROC_RETRY_BACKOFF;
+                document.getElementById('QUEUE_CONCURRENCY').value = config.QUEUE_CONCURRENCY;
+                document.getElementById('FFMPEG_MAX_RETRY').value = config.FFMPEG_MAX_RETRY;
+                document.getElementById('FFMPEG_BASE_BACKOFF_MS').value = config.FFMPEG_BASE_BACKOFF_MS;
+                document.getElementById('FFMPEG_MAX_BACKOFF_MS').value = config.FFMPEG_MAX_BACKOFF_MS;
+                document.getElementById('FFMPEG_COOL_OFF_MS').value = config.FFMPEG_COOL_OFF_MS;
+                document.getElementById('FFMPEG_WATCHDOG_TIMEOUT_MS').value = config.FFMPEG_WATCHDOG_TIMEOUT_MS;
+
+            } catch (error) {
+                console.error('Error fetching config:', error);
+                alert('Could not load settings.');
+            }
+
+            // Handle form submission
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const formData = new FormData(form);
+                const newConfig = {};
+                for (const [key, value] of formData.entries()) {
+                    const input = form.elements[key];
+                    if (input.type === 'checkbox') {
+                        newConfig[key] = input.checked;
+                    } else if (input.type === 'number') {
+                        newConfig[key] = Number(value);
+                    } else {
+                        newConfig[key] = value;
+                    }
+                }
+
+                // Convert values back to original units
+                newConfig.MAX_STORAGE = newConfig.MAX_STORAGE * 1024 * 1024 * 1024;
+                newConfig.CLEANUP_INTERVAL_MS = newConfig.CLEANUP_INTERVAL_MS * 60 * 1000;
+                newConfig.PERIODIC_SYNC_MS = newConfig.PERIODIC_SYNC_MS * 60 * 1000;
+
+                try {
+                    const response = await fetch('/api/config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(newConfig)
+                    });
+                    if (response.ok) {
+                        alert('Settings saved successfully!');
+                    } else {
+                        const errorText = await response.text();
+                        alert(`Error saving settings: ${errorText}`);
+                    }
+                } catch (error) {
+                    console.error('Error saving config:', error);
+                    alert('An error occurred while saving settings.');
+                }
+            });
+
+            // Dark mode toggle
+            const darkToggle = document.getElementById('dark-toggle');
+            const body = document.body;
+            const setCookie = (name, value, days) => {
+                let expires = "";
+                if (days) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    expires = "; expires=" + date.toUTCString();
+                }
+                document.cookie = name + "=" + (value || "") + expires + "; path=/";
+            }
+            const getCookie = (name) => {
+                const nameEQ = name + "=";
+                const ca = document.cookie.split(';');
+                for (let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                }
+                return null;
+            }
+            const applyTheme = () => {
+                const theme = getCookie('theme');
+                const icon = darkToggle.querySelector('i');
+                if (theme === 'dark') {
+                    body.classList.add('dark');
+                    icon.classList.remove('bi-moon-fill');
+                    icon.classList.add('bi-sun-fill');
+                } else {
+                    body.classList.remove('dark');
+                    icon.classList.remove('bi-sun-fill');
+                    icon.classList.add('bi-moon-fill');
+                }
+            }
+            darkToggle.addEventListener('click', () => {
+                body.classList.toggle('dark');
+                const isDark = body.classList.contains('dark');
+                setCookie('theme', isDark ? 'dark' : 'light', 365);
+                applyTheme();
+            });
+            applyTheme();
+        });
+    </script>
+</body>
+</html>
