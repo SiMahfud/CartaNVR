@@ -363,18 +363,22 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
 
 // === Rute untuk Maintenance ===
 app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
-    const command = 'node reboot.js';
+    const serviceName = config.pm2_service_name || 'nvr';
+    const command = `pm2 restart ${serviceName}`;
 
+    // Respond to the client immediately
+    res.status(200).json({ message: 'Application reboot initiated.' });
+
+    // Execute the restart command in the background
     exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error rebooting application: ${error.message}`);
-            return res.status(500).json({ message: `Failed to reboot application: ${error.message}` });
+            // This happens in the background, so we just log it.
         }
         if (stderr) {
             console.warn(`Reboot command stderr: ${stderr}`);
         }
         console.log(`Reboot command stdout: ${stdout}`);
-        res.status(200).json({ message: 'Application reboot initiated successfully.' });
     });
 });
 
