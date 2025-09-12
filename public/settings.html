@@ -92,6 +92,11 @@
                                 <div class="tab-pane fade" id="v-pills-general" role="tabpanel">
                                     <h4>General Storage Settings</h4>
                                     <div class="mb-3">
+                                        <label for="pm2_service_name" class="form-label">PM2 Service Name</label>
+                                        <input type="text" class="form-control" id="pm2_service_name" name="pm2_service_name">
+                                        <div class="form-text">The name of the service in PM2. Requires a restart to take full effect.</div>
+                                    </div>
+                                    <div class="mb-3">
                                         <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval (minutes)</label>
                                         <input type="number" class="form-control" id="CLEANUP_INTERVAL_MS" name="CLEANUP_INTERVAL_MS">
                                         <div class="form-text">How often to check for old recordings to delete (in minutes).</div>
@@ -462,6 +467,9 @@
                 try {
                     const response = await fetch('/api/config');
                     const config = await response.json();
+                    if (config.pm2_service_name) {
+                        document.getElementById('pm2_service_name').value = config.pm2_service_name;
+                    }
                     document.getElementById('CLEANUP_INTERVAL_MS').value = config.CLEANUP_INTERVAL_MS / (60 * 1000);
                     document.getElementById('PERIODIC_SYNC_MS').value = config.PERIODIC_SYNC_MS / (60 * 1000);
                     document.getElementById('FASTSTART_POSTPROC').checked = config.FASTSTART_POSTPROC;

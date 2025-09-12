@@ -4,7 +4,8 @@
   "description": "A simple NVR application",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:pm2": "node start.js"
   },
   "keywords": [],
   "author": "",

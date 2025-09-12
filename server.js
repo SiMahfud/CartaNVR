@@ -6,6 +6,7 @@ const { spawn, exec } = require('child_process');
 const database = require('./lib/database');
 const onvifScanner = require('./lib/onvif-scanner');
 const { sanitizeCamId } = require('./lib/utils');
+const config = require('./lib/config'); // Load config
 
 // Modul untuk Autentikasi
 const session = require('express-session');
@@ -243,26 +244,59 @@ app.get('/api/config', isAuthenticated, (req, res) => {
 });
 
 app.post('/api/config', isAuthenticated, async (req, res) => {
+  const configPath = path.join(__dirname, 'lib', 'config.json');
+  
+  // 1. Get old config by requiring it (it will be cached)
+  const oldConfig = require('./lib/config');
+  const oldServiceName = oldConfig.pm2_service_name;
+
   try {
     const newConfig = req.body;
-    const configPath = path.join(__dirname, 'lib', 'config.json');
+    const newServiceName = newConfig.pm2_service_name;
 
+    // Read existing user config from file to merge
     let existingConfig = {};
     if (fs.existsSync(configPath)) {
       const rawData = fs.readFileSync(configPath);
       existingConfig = JSON.parse(rawData);
     }
 
+    // 2. Save the new config to file
     const updatedConfig = { ...existingConfig, ...newConfig };
-
     fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
     
+    // Clear require cache to ensure next require gets the new version
     delete require.cache[require.resolve('./lib/config')];
+    
+    // 3. Check if service name has changed and handle PM2 restart
+    if (newServiceName && oldServiceName && newServiceName !== oldServiceName) {
+      console.log(`PM2 service name changed from "${oldServiceName}" to "${newServiceName}". Restarting service...`);
+      
+      // Use `pm2 delete` which stops and removes. Add `|| true` so the command doesn't fail if the old service doesn't exist.
+      const restartCommand = `(pm2 delete "${oldServiceName}" || true) && pm2 start server.js --name "${newServiceName}"`;
+      
+      console.log(`Executing: ${restartCommand}`);
 
-    res.status(200).json({ message: 'Config updated successfully' });
+      exec(restartCommand, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Failed to restart PM2 service: ${error.message}`);
+        }
+        if (stdout) console.log('PM2 restart command stdout:', stdout);
+        if (stderr) console.warn('PM2 restart command stderr:', stderr);
+      });
+
+      // Respond immediately, the restart happens in the background
+      return res.status(200).json({ message: 'Config updated. Application is restarting with the new PM2 service name.' });
+
+    } else {
+      return res.status(200).json({ message: 'Config updated successfully.' });
+    }
+
   } catch (error) {
     console.error('Failed to save config:', error);
-    res.status(500).json({ error: 'Failed to save config' });
+    // Important: clear cache again in case of error so we don't have a corrupted config state
+    delete require.cache[require.resolve('./lib/config')];
+    return res.status(500).json({ error: 'Failed to save config' });
   }
 });
 
@@ -329,7 +363,7 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
 
 // === Rute untuk Maintenance ===
 app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
-    const command = 'pm2 restart "nvr3377"';
+    const command = `pm2 restart "${config.pm2_service_name}"`;
 
     exec(command, (error, stdout, stderr) => {
         if (error) {
@@ -345,7 +379,7 @@ app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
 });
 
 app.post('/api/maintenance/flush-logs', isAuthenticated, (req, res) => {
-    const command = 'pm2 flush "nvr3377"';
+    const command = `pm2 flush "${config.pm2_service_name}"`;
 
     exec(command, (error, stdout, stderr) => {
         if (error) {
