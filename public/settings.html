@@ -76,6 +76,7 @@
                                 <button class="nav-link text-start" id="v-pills-intervals-tab" data-bs-toggle="pill" data-bs-target="#v-pills-intervals" type="button" role="tab"><i class="bi bi-clock-history me-2"></i>Intervals</button>
                                 <button class="nav-link text-start" id="v-pills-postproc-tab" data-bs-toggle="pill" data-bs-target="#v-pills-postproc" type="button" role="tab"><i class="bi bi-arrow-repeat me-2"></i>Post-processing</button>
                                 <button class="nav-link text-start" id="v-pills-ffmpeg-tab" data-bs-toggle="pill" data-bs-target="#v-pills-ffmpeg" type="button" role="tab"><i class="bi bi-film me-2"></i>FFmpeg</button>
+                                <button class="nav-link text-start" id="v-pills-maintenance-tab" data-bs-toggle="pill" data-bs-target="#v-pills-maintenance" type="button" role="tab"><i class="bi bi-tools me-2"></i>Maintenance</button>
                             </div>
                         </div>
                         <div class="col-md-9">
@@ -155,6 +156,25 @@
                                     <div class="mb-3">
                                         <label for="FFMPEG_WATCHDOG_TIMEOUT_MS" class="form-label">FFmpeg Watchdog Timeout (ms)</label>
                                         <input type="number" class="form-control" id="FFMPEG_WATCHDOG_TIMEOUT_MS" name="FFMPEG_WATCHDOG_TIMEOUT_MS">
+                                    </div>
+                                </div>
+                                <!-- Maintenance Tab -->
+                                <div class="tab-pane fade" id="v-pills-maintenance" role="tabpanel">
+                                    <h4>Maintenance</h4>
+                                    <p class="text-muted">Perform system maintenance tasks.</p>
+                                    <div class="card mt-4">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Application Control</h5>
+                                            <p class="card-text">Use these actions to manage the application process. This will restart all services managed by PM2.</p>
+                                            <button class="btn btn-warning" type="button" id="reboot-app-btn"><i class="bi bi-bootstrap-reboot"></i> Reboot Application</button>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-4">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Log Management</h5>
+                                            <p class="card-text">This will flush the logs for all PM2 processes, clearing out the log files.</p>
+                                            <button class="btn btn-danger" type="button" id="flush-logs-btn"><i class="bi bi-trash2"></i> Clear PM2 Logs</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -493,6 +513,40 @@
                     console.error('Error saving config:', error);
                 }
             });
+
+            // --- Maintenance Logic ---
+            const rebootAppBtn = document.getElementById('reboot-app-btn');
+            const flushLogsBtn = document.getElementById('flush-logs-btn');
+
+            if(rebootAppBtn) {
+                rebootAppBtn.addEventListener('click', async () => {
+                    if (confirm('Are you sure you want to reboot the application? This will restart the server process.')) {
+                        try {
+                            const response = await fetch('/api/maintenance/reboot', { method: 'POST' });
+                            const result = await response.json();
+                            alert(result.message);
+                        } catch (error) {
+                            console.error('Error rebooting application:', error);
+                            alert('An error occurred while trying to reboot the application.');
+                        }
+                    }
+                });
+            }
+
+            if(flushLogsBtn) {
+                flushLogsBtn.addEventListener('click', async () => {
+                    if (confirm('Are you sure you want to clear all PM2 logs? This action cannot be undone.')) {
+                        try {
+                            const response = await fetch('/api/maintenance/flush-logs', { method: 'POST' });
+                            const result = await response.json();
+                            alert(result.message);
+                        } catch (error) {
+                            console.error('Error flushing logs:', error);
+                            alert('An error occurred while trying to clear the logs.');
+                        }
+                    }
+                });
+            }
 
             // Initial Load
             loadStorages();

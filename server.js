@@ -327,6 +327,39 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
     }
 });
 
+// === Rute untuk Maintenance ===
+app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
+    const command = 'pm2 restart "nvr3377"';
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error rebooting application: ${error.message}`);
+            return res.status(500).json({ message: `Failed to reboot application: ${error.message}` });
+        }
+        if (stderr) {
+            console.warn(`Reboot command stderr: ${stderr}`);
+        }
+        console.log(`Reboot command stdout: ${stdout}`);
+        res.status(200).json({ message: 'Application reboot initiated successfully.' });
+    });
+});
+
+app.post('/api/maintenance/flush-logs', isAuthenticated, (req, res) => {
+    const command = 'pm2 flush "nvr3377"';
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error flushing logs: ${error.message}`);
+            return res.status(500).json({ message: `Failed to flush logs: ${error.message}` });
+        }
+        if (stderr) {
+            console.warn(`Flush logs command stderr: ${stderr}`);
+        }
+        console.log(`Flush logs command stdout: ${stdout}`);
+        res.status(200).json({ message: 'PM2 logs flushed successfully.' });
+    });
+});
+
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)
 app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 'dash'), {
   setHeaders: (res, filePath) => {
