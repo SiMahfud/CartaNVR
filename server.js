@@ -277,7 +277,7 @@ app.post('/api/config', isAuthenticated, async (req, res) => {
       
       console.log(`Executing: ${restartCommand}`);
 
-      exec(restartCommand, (error, stdout, stderr) => {
+      exec(restartCommand, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
           console.error(`Failed to restart PM2 service: ${error.message}`);
         }
@@ -308,7 +308,7 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
     if (!currentPath) {
         if (isWindows) {
             console.log('No path, listing drives (Windows)');
-            exec('wmic logicaldisk get name', (err, stdout) => {
+            exec('wmic logicaldisk get name', { windowsHide: true }, (err, stdout) => {
                 if (err) {
                     console.error('Error getting drives:', err);
                     return res.status(500).json({ error: 'Failed to get drives' });
@@ -365,7 +365,7 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
 app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
     const command = `pm2 restart "${config.pm2_service_name}"`;
 
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error rebooting application: ${error.message}`);
             return res.status(500).json({ message: `Failed to reboot application: ${error.message}` });
@@ -381,7 +381,7 @@ app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
 app.post('/api/maintenance/flush-logs', isAuthenticated, (req, res) => {
     const command = `pm2 flush "${config.pm2_service_name}"`;
 
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error flushing logs: ${error.message}`);
             return res.status(500).json({ message: `Failed to flush logs: ${error.message}` });
@@ -399,7 +399,7 @@ app.get('/api/maintenance/logs', isAuthenticated, (req, res) => {
     // --nostream is crucial to prevent the command from hanging
     const command = `pm2 logs "${config.pm2_service_name}" --lines ${lines} --nostream`;
 
-    exec(command, (error, stdout, stderr) => {
+    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error fetching logs: ${error.message}`);
             // Even if the command fails, stderr might have useful info (e.g., "process not found")
