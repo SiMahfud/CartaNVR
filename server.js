@@ -363,7 +363,7 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
 
 // === Rute untuk Maintenance ===
 app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
-    const command = `pm2 restart "${config.pm2_service_name}"`;
+    const command = 'node reboot.js';
 
     exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
