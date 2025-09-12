@@ -394,6 +394,22 @@ app.post('/api/maintenance/flush-logs', isAuthenticated, (req, res) => {
     });
 });
 
+app.get('/api/maintenance/logs', isAuthenticated, (req, res) => {
+    const lines = req.query.lines || 200;
+    // --nostream is crucial to prevent the command from hanging
+    const command = `pm2 logs "${config.pm2_service_name}" --lines ${lines} --nostream`;
+
+    exec(command, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error fetching logs: ${error.message}`);
+            // Even if the command fails, stderr might have useful info (e.g., "process not found")
+            return res.status(500).json({ logs: stderr || '' });
+        }
+        // PM2 logs command often outputs to both stdout and stderr, so we combine them.
+        res.status(200).json({ logs: stdout + stderr });
+    });
+});
+
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)
 app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 'dash'), {
   setHeaders: (res, filePath) => {
