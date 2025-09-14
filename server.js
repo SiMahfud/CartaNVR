@@ -415,10 +415,8 @@ app.get('/api/maintenance/logs', isAuthenticated, (req, res) => {
 });
 
 app.post('/api/maintenance/update', isAuthenticated, (req, res) => {
-    const serviceName = config.pm2_service_name || 'nvr';
-    // Menjalankan git pull, dan jika berhasil, restart service pm2.
-    // Opsi --git-dirty memungkinkan restart bahkan jika ada perubahan lokal yang belum di-commit.
-    const command = `git pull && pm2 restart ${serviceName}`;
+    // Menjalankan git pull
+    const command = `git pull`;
 
     console.log(`Executing update command: ${command}`);
 
@@ -429,7 +427,7 @@ app.post('/api/maintenance/update', isAuthenticated, (req, res) => {
             return res.status(500).json({ message: `Update failed: ${error.message}`, output });
         }
         console.log(`Update command output: ${output}`);
-        res.status(200).json({ message: 'Application update initiated successfully. The service will restart.', output });
+        res.status(200).json({ message: 'Application update initiated successfully. The service need to restart restart.', output });
     });
 });
 
