@@ -414,6 +414,45 @@ app.get('/api/maintenance/logs', isAuthenticated, (req, res) => {
     });
 });
 
+app.post('/api/maintenance/update', isAuthenticated, (req, res) => {
+    const serviceName = config.pm2_service_name || 'nvr';
+    // Menjalankan git pull, dan jika berhasil, restart service pm2.
+    // Opsi --git-dirty memungkinkan restart bahkan jika ada perubahan lokal yang belum di-commit.
+    const command = `git pull && pm2 restart ${serviceName}`;
+
+    console.log(`Executing update command: ${command}`);
+
+    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+        const output = stdout + stderr;
+        if (error) {
+            console.error(`Update command failed: ${error.message}`);
+            return res.status(500).json({ message: `Update failed: ${error.message}`, output });
+        }
+        console.log(`Update command output: ${output}`);
+        res.status(200).json({ message: 'Application update initiated successfully. The service will restart.', output });
+    });
+});
+
+app.post('/api/maintenance/run-script', isAuthenticated, (req, res) => {
+    // PERINGATAN: Endpoint ini menjalankan perintah dengan sudo.
+    // Pastikan Anda telah mengkonfigurasi /etc/sudoers dengan benar di server Anda
+    // agar pengguna yang menjalankan Node.js dapat menjalankan skrip ini tanpa password.
+    const scriptPath = '/opt/nvr/maintenance.sh'; // Ganti dengan path skrip Anda yang sebenarnya
+    const command = `sudo ${scriptPath}`;
+
+    console.log(`Executing maintenance script: ${command}`);
+
+    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+        const output = stdout + stderr;
+        if (error) {
+            console.error(`Maintenance script failed: ${error.message}`);
+            return res.status(500).json({ message: `Maintenance script failed: ${error.message}`, output });
+        }
+        console.log(`Maintenance script output: ${output}`);
+        res.status(200).json({ message: 'Maintenance script executed successfully.', output });
+    });
+});
+
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)
 app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 'dash'), {
   setHeaders: (res, filePath) => {

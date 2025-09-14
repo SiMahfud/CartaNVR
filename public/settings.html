@@ -167,6 +167,32 @@
                                 <div class="tab-pane fade" id="v-pills-maintenance" role="tabpanel">
                                     <h4>Maintenance</h4>
                                     <p class="text-muted">Perform system maintenance tasks.</p>
+
+                                    <!-- NEW: Update and Custom Script -->
+                                    <div class="card mt-4">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Application Update</h5>
+                                            <p class="card-text">Pull the latest changes from Git and restart the application. This requires the app to be running under PM2.</p>
+                                            <button class="btn btn-primary" type="button" id="update-app-btn"><i class="bi bi-cloud-arrow-down-fill"></i> Update Application</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="card mt-4">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Run Custom Maintenance Script</h5>
+                                            <p class="card-text">Run the predefined maintenance script on the server (e.g., /opt/nvr/maintenance.sh). Requires sudo configuration.</p>
+                                            <button class="btn btn-secondary" type="button" id="run-script-btn"><i class="bi bi-terminal"></i> Run Maintenance Script</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="card mt-4">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Command Output</h5>
+                                            <pre class="mt-2 p-2 bg-dark text-white rounded" style="min-height: 150px; max-height: 400px; overflow-y: auto;"><code id="maintenance-output-log">Output will appear here...</code></pre>
+                                        </div>
+                                    </div>
+                                    <!-- END NEW -->
+
                                     <div class="card mt-4">
                                         <div class="card-body">
                                             <h5 class="card-title">View Logs</h5>
@@ -536,6 +562,45 @@
             const flushLogsBtn = document.getElementById('flush-logs-btn');
             const viewLogsBtn = document.getElementById('view-logs-btn');
             const logsContainer = document.getElementById('logs-container');
+            const updateAppBtn = document.getElementById('update-app-btn');
+            const runScriptBtn = document.getElementById('run-script-btn');
+            const maintenanceLog = document.getElementById('maintenance-output-log');
+
+            if(updateAppBtn) {
+                updateAppBtn.addEventListener('click', () => {
+                    if (!confirm('Are you sure you want to update the application? This will pull the latest code and restart the service.')) return;
+                    maintenanceLog.textContent = 'Starting application update...';
+                    fetch('/api/maintenance/update', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            maintenanceLog.textContent = `Message: ${data.message}
+
+Output:
+${data.output || ''}`;
+                        })
+                        .catch(err => {
+                            maintenanceLog.textContent = 'An error occurred: ' + err;
+                        });
+                });
+            }
+
+            if(runScriptBtn) {
+                runScriptBtn.addEventListener('click', () => {
+                    if (!confirm('Are you sure you want to run the custom maintenance script?')) return;
+                    maintenanceLog.textContent = 'Running maintenance script...';
+                    fetch('/api/maintenance/run-script', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            maintenanceLog.textContent = `Message: ${data.message}
+
+Output:
+${data.output || ''}`;
+                        })
+                        .catch(err => {
+                            maintenanceLog.textContent = 'An error occurred: ' + err;
+                        });
+                });
+            }
 
             if(viewLogsBtn) {
                 viewLogsBtn.addEventListener('click', async () => {
