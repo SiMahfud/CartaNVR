@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const fsp = fs.promises;
 const { spawn, exec } = require('child_process');
 const database = require('./lib/database');
 const onvifScanner = require('./lib/onvif-scanner');
@@ -449,6 +450,55 @@ app.post('/api/maintenance/run-script', isAuthenticated, (req, res) => {
         console.log(`Maintenance script output: ${output}`);
         res.status(200).json({ message: 'Maintenance script executed successfully.', output });
     });
+});
+
+app.post('/api/maintenance/delete-all-recordings', isAuthenticated, async (req, res) => {
+    console.log('Received request to delete all recordings.');
+    try {
+        let deletedFiles = 0;
+        const storages = await database.getAllStorages();
+
+        for (const storage of storages) {
+            if (!fs.existsSync(storage.path)) {
+                console.warn(`Storage path not found, skipping: ${storage.path}`);
+                continue;
+            }
+
+            const cameraDirs = await fsp.readdir(storage.path);
+            for (const camDirName of cameraDirs) {
+                if (!camDirName.startsWith('cam_')) continue;
+                
+                const camDirPath = path.join(storage.path, camDirName);
+                try {
+                    const stats = await fsp.stat(camDirPath);
+                    if (!stats.isDirectory()) continue;
+
+                    const files = await fsp.readdir(camDirPath);
+                    for (const file of files) {
+                        if (file.endsWith('.mp4')) {
+                            const filePath = path.join(camDirPath, file);
+                            try {
+                                await fsp.unlink(filePath);
+                                deletedFiles++;
+                            } catch (fileErr) {
+                                console.error(`Failed to delete file: ${filePath}`, fileErr);
+                            }
+                        }
+                    }
+                } catch (dirErr) {
+                     console.error(`Failed to process directory: ${camDirPath}`, dirErr);
+                }
+            }
+        }
+
+        const dbResult = await database.deleteAllRecordingsFromDB();
+        console.log(`Deleted ${deletedFiles} file(s) and ${dbResult.deleted} DB entries.`);
+        res.status(200).json({ message: `Successfully deleted ${deletedFiles} recording(s) and cleared the database.` });
+
+    } catch (error) {
+        console.error('Error deleting all recordings:', error);
+        res.status(500).json({ message: `Failed to delete all recordings: ${error.message}` });
+    }
 });
 
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)

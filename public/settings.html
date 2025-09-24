@@ -216,6 +216,20 @@
                                             <button class="btn btn-danger" type="button" id="flush-logs-btn"><i class="bi bi-trash2"></i> Clear PM2 Logs</button>
                                         </div>
                                     </div>
+
+                                    <!-- Danger Zone -->
+                                    <div class="card mt-4 border-danger">
+                                        <div class="card-header bg-danger text-white">
+                                            <i class="bi bi-exclamation-octagon-fill me-2"></i>Danger Zone
+                                        </div>
+                                        <div class="card-body">
+                                            <h5 class="card-title text-danger">Delete All Recordings</h5>
+                                            <p class="card-text">This will permanently delete all video recordings from the filesystem and clear all recording metadata from the database. This action cannot be undone.</p>
+                                            <button class="btn btn-danger" type="button" id="delete-all-recordings-btn"><i class="bi bi-trash-fill"></i> Delete All Recordings</button>
+                                        </div>
+                                    </div>
+                                    <!-- End Danger Zone -->
+                                    
                                 </div>
                             </div>
                         </div>
@@ -573,10 +587,7 @@
                     fetch('/api/maintenance/update', { method: 'POST' })
                         .then(response => response.json())
                         .then(data => {
-                            maintenanceLog.textContent = `Message: ${data.message}
-
-Output:
-${data.output || ''}`;
+                            maintenanceLog.textContent = `Message: ${data.message}\n\nOutput:\n${data.output || ''}`;
                         })
                         .catch(err => {
                             maintenanceLog.textContent = 'An error occurred: ' + err;
@@ -591,10 +602,7 @@ ${data.output || ''}`;
                     fetch('/api/maintenance/run-script', { method: 'POST' })
                         .then(response => response.json())
                         .then(data => {
-                            maintenanceLog.textContent = `Message: ${data.message}
-
-Output:
-${data.output || ''}`;
+                            maintenanceLog.textContent = `Message: ${data.message}\n\nOutput:\n${data.output || ''}`;
                         })
                         .catch(err => {
                             maintenanceLog.textContent = 'An error occurred: ' + err;
@@ -641,6 +649,23 @@ ${data.output || ''}`;
                         } catch (error) {
                             console.error('Error flushing logs:', error);
                             alert('An error occurred while trying to clear the logs.');
+                        }
+                    }
+                });
+            }
+
+            // --- Danger Zone Logic ---
+            const deleteAllRecordingsBtn = document.getElementById('delete-all-recordings-btn');
+            if(deleteAllRecordingsBtn) {
+                deleteAllRecordingsBtn.addEventListener('click', async () => {
+                    if (confirm('ARE YOU ABSOLUTELY SURE?\n\nThis will permanently delete ALL recordings from the disk and the database. This action cannot be undone.')) {
+                        try {
+                            const response = await fetch('/api/maintenance/delete-all-recordings', { method: 'POST' });
+                            const result = await response.json();
+                            alert(result.message);
+                        } catch (error) {
+                            console.error('Error deleting all recordings:', error);
+                            alert('An error occurred while trying to delete all recordings.');
                         }
                     }
                 });
