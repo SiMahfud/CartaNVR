@@ -365,7 +365,7 @@ app.get('/api/browse', isAuthenticated, (req, res) => {
 // === Rute untuk Maintenance ===
 app.post('/api/maintenance/reboot', isAuthenticated, (req, res) => {
     const serviceName = config.pm2_service_name || 'nvr';
-    const command = `pm2 restart ${serviceName}`;
+    const command = `pm2 restart "${serviceName}"`;
 
     // Respond to the client immediately
     res.status(200).json({ message: 'Application reboot initiated.' });
