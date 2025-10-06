@@ -126,11 +126,11 @@ app.get('/settings', isAuthenticated, (req, res) => {
 // Lindungi semua API dengan middleware isAuthenticated
 app.post('/api/scan', isAuthenticated, async (req, res) => {
   try {
-    const { ipRange } = req.body;
+    const { ipRange, port, user, pass } = req.body;
     if (!ipRange) {
       return res.status(400).json({ error: 'ipRange is required' });
     }
-    const devices = await onvifScanner.scan(ipRange);
+    const devices = await onvifScanner.scan(ipRange, port, user, pass);
     res.json(devices);
   } catch (error) {
     console.error('Scan failed:', error);
