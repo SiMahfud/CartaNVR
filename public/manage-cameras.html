@@ -141,6 +141,12 @@
             <label for="edit-camera-storage" class="form-label">Storage Location</label>
             <select class="form-select" id="edit-camera-storage"></select>
           </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="edit-camera-is-hevc">
+            <label class="form-check-label" for="edit-camera-is-hevc">
+              HEVC/H.265 Stream (Will be transcoded to H.264)
+            </label>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -241,11 +247,12 @@
         cameras.forEach(cam => {
           const col = document.createElement('div');
           col.classList.add('col');
+          const hevcBadge = cam.is_hevc ? '<span class="badge bg-info ms-2">HEVC</span>' : '';
           col.innerHTML = `
             <div class="card h-100">
               <div class="card-body">
                 <div class="d-flex justify-content-between">
-                    <h6 class="card-title fw-bold">${cam.name}</h6>
+                    <h6 class="card-title fw-bold">${cam.name}${hevcBadge}</h6>
                     <small class="text-muted">ID: ${cam.id}</small>
                 </div>
                 <p class="card-text small mb-1">
@@ -356,7 +363,7 @@
           const response = await fetch('/api/cameras', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, ip_address, rtsp_url, storage_id: null })
+            body: JSON.stringify({ name, ip_address, rtsp_url, storage_id: null, is_hevc: false })
           });
 
           if (response.ok) {
@@ -394,6 +401,7 @@
             document.getElementById('edit-camera-id').value = id;
             document.getElementById('edit-camera-name').value = camera.name;
             document.getElementById('edit-camera-rtsp').value = camera.rtsp_url;
+            document.getElementById('edit-camera-is-hevc').checked = camera.is_hevc || false;
             storageSelect.value = camera.storage_id || '';
             editModal.show();
           }
@@ -406,11 +414,12 @@
         const name = document.getElementById('edit-camera-name').value;
         const rtsp_url = document.getElementById('edit-camera-rtsp').value;
         const storage_id = storageSelect.value ? parseInt(storageSelect.value, 10) : null;
+        const is_hevc = document.getElementById('edit-camera-is-hevc').checked;
 
         const response = await fetch(`/api/cameras/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, rtsp_url, storage_id })
+          body: JSON.stringify({ name, rtsp_url, storage_id, is_hevc })
         });
 
         if (response.ok) {
