@@ -73,9 +73,14 @@ async function startAllRecordings() {
   // 1. Sinkronisasi file yang mungkin sudah ada sebelumnya.
   await syncExistingFilesOnce();
 
-  // 2. Mulai proses FFmpeg untuk setiap kamera.
-  // ffmpeg-manager akan memanggil balik `startDirWatcher` untuk setiap direktori baru.
-  cameras.forEach((cam) => startFFmpegForCamera(cam, startDirWatcher));
+  // 2. Mulai proses FFmpeg untuk setiap kamera yang enabled.
+  cameras.forEach((cam) => {
+    if (cam.enabled !== false) {
+      startFFmpegForCamera(cam, startDirWatcher);
+    } else {
+      logger.log('recorder', `[RECORDER] Kamera ${cam.id} (${cam.name}) dinonaktifkan. Mewati...`);
+    }
+  });
 
   // 3. Mulai tugas periodik (cleanup dan sync DB).
   if (!intervals.has('cleanup')) {
@@ -118,7 +123,47 @@ async function stopAllRecordings() {
   logger.log('recorder', '[RECORDER] Semua layanan telah dihentikan.');
 }
 
+/**
+ * Memulai perekaman untuk satu kamera tertentu.
+ * @param {object} camera Objek kamera dari database.
+ */
+function startRecordingForCamera(camera) {
+  if (camera.enabled === false) return;
+  startFFmpegForCamera(camera, startDirWatcher);
+}
+
+/**
+ * Menghentikan perekaman untuk satu kamera tertentu.
+ * @param {number|string} cameraId ID kamera.
+ * @param {string} storagePath Path storage kamera (opsional, untuk menutup watcher).
+ */
+async function stopRecordingForCamera(cameraId, storagePath) {
+  const { stopFFmpegForCamera } = require('./lib/ffmpeg-manager.js');
+  const { sanitizeCamId } = require('./lib/utils');
+  
+  // 1. Hentikan FFmpeg
+  await stopFFmpegForCamera(cameraId);
+
+  // 2. Hentikan watcher jika storagePath diketahui
+  if (storagePath) {
+    const camId = sanitizeCamId(cameraId);
+    const dirPath = path.join(storagePath, `cam_${camId}`);
+    const watcher = activeWatchers.get(dirPath);
+    if (watcher) {
+      try {
+        await watcher.close();
+        activeWatchers.delete(dirPath);
+        logger.log('recorder', `[WATCHER] Watcher untuk ${dirPath} dihentikan.`);
+      } catch (e) {
+        console.error(`[WATCHER] Gagal menutup watcher untuk ${dirPath}:`, e.message);
+      }
+    }
+  }
+}
+
 module.exports = {
   startAllRecordings,
   stopAllRecordings,
+  startRecordingForCamera,
+  stopRecordingForCamera,
 };

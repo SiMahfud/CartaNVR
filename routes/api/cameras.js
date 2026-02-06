@@ -28,7 +28,26 @@ router.post('/', isAuthenticated, async (req, res) => {
 // PUT /api/cameras/:id
 router.put('/:id', isAuthenticated, async (req, res) => {
   try {
-    const updatedCamera = await database.updateCamera(req.params.id, req.body);
+    const cameraId = req.params.id;
+    const oldCamera = await database.getCameraById(cameraId);
+    if (!oldCamera) {
+      return res.status(404).json({ error: 'Camera not found' });
+    }
+
+    const updatedCamera = await database.updateCamera(cameraId, req.body);
+    
+    // Dynamic process control
+    const recorder = require('../../recorder');
+    if (oldCamera.enabled && req.body.enabled === false) {
+      // Transitioned to Disabled
+      await recorder.stopRecordingForCamera(cameraId, oldCamera.storage_path);
+    } else if (!oldCamera.enabled && req.body.enabled === true) {
+      // Transitioned to Enabled
+      // We need the full camera object including storage info for starting
+      const fullCamera = await database.getCameraById(cameraId);
+      recorder.startRecordingForCamera(fullCamera);
+    }
+
     res.json(updatedCamera);
   } catch (error) {
     console.error('Update failed:', error);
