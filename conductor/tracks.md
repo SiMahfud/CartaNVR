@@ -11,3 +11,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Configurable Terminal Logging**
   *Link: [./tracks/logging_20260205/](./tracks/logging_20260205/)*
+
+---
+
+- [~] **Track: Camera Enable/Disable Toggle**
+*Link: [./tracks/camera_toggle_20260206/](./tracks/camera_toggle_20260206/)*
