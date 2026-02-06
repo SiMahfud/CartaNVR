@@ -7,17 +7,17 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Database Schema Update' (Protocol in workflow.md)
 
 ## Phase 2: API & Backend Logic
-- [ ] Task: Update the Camera API to handle the `enabled` field.
-    - [ ] Modify `routes/api/cameras.js` to include the `enabled` field in GET requests.
-    - [ ] Update the PUT/POST routes in `routes/api/cameras.js` to accept and save the `enabled` state.
-- [ ] Task: Update Recorder logic to respect the `enabled` flag.
-    - [ ] Modify `recorder.js` to only start recordings for cameras where `enabled` is true.
-    - [ ] Update `lib/ffmpeg-manager.js` (or wherever processes are managed) to provide a clean way to stop all processes for a specific camera ID.
-- [ ] Task: Implement dynamic process control.
-    - [ ] In the API route for updating a camera, if the `enabled` state changes:
-        - [ ] If changed to `false`, trigger the shutdown of recording and streaming for that camera.
-        - [ ] If changed to `true`, trigger the startup of recording for that camera.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: API & Backend Logic' (Protocol in workflow.md)
+- [x] Task: Update the Camera API to handle the `enabled` field. 74f879f
+    - [x] Modify `routes/api/cameras.js` to include the `enabled` field in GET requests.
+    - [x] Update the PUT/POST routes in `routes/api/cameras.js` to accept and save the `enabled` state.
+- [x] Task: Update Recorder logic to respect the `enabled` flag. 74f879f
+    - [x] Modify `recorder.js` to only start recordings for cameras where `enabled` is true.
+    - [x] Update `lib/ffmpeg-manager.js` (or wherever processes are managed) to provide a clean way to stop all processes for a specific camera ID.
+- [x] Task: Implement dynamic process control. 74f879f
+    - [x] In the API route for updating a camera, if the `enabled` state changes:
+        - [x] If changed to `false`, trigger the shutdown of recording and streaming for that camera.
+        - [x] If changed to `true`, trigger the startup of recording for that camera.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: API & Backend Logic' (Protocol in workflow.md)
 
 ## Phase 3: Frontend Implementation
 - [ ] Task: Update "Manage Cameras" UI.
