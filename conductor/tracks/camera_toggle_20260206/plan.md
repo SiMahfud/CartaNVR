@@ -6,7 +6,7 @@
     - [x] Update `lib/database.js` initialization logic to ensure the column exists.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Database Schema Update' (Protocol in workflow.md)
 
-## Phase 2: API & Backend Logic
+## Phase 2: API & Backend Logic [checkpoint: 56dd2ad]
 - [x] Task: Update the Camera API to handle the `enabled` field. 74f879f
     - [x] Modify `routes/api/cameras.js` to include the `enabled` field in GET requests.
     - [x] Update the PUT/POST routes in `routes/api/cameras.js` to accept and save the `enabled` state.
