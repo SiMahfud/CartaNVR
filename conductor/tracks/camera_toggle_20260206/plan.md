@@ -20,12 +20,12 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: API & Backend Logic' (Protocol in workflow.md)
 
 ## Phase 3: Frontend Implementation
-- [ ] Task: Update "Manage Cameras" UI.
-    - [ ] Modify `public/manage-cameras.html` and its associated JS to add the "Enabled" toggle to the Edit Modal.
-    - [ ] Ensure the toggle state is correctly loaded when opening the modal and sent back to the server on save.
-- [ ] Task: Visual Feedback in Dashboard.
-    - [ ] Update `public/dashboard.html` to visually indicate if a camera is disabled (e.g., greyed out or a "Disabled" badge).
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Frontend Implementation' (Protocol in workflow.md)
+- [x] Task: Update "Manage Cameras" UI. 53da899
+    - [x] Modify `public/manage-cameras.html` and its associated JS to add the "Enabled" toggle to the Edit Modal.
+    - [x] Ensure the toggle state is correctly loaded when opening the modal and sent back to the server on save.
+- [x] Task: Visual Feedback in Dashboard. 53da899
+    - [x] Update `public/dashboard.html` to visually indicate if a camera is disabled (e.g., greyed out or a "Disabled" badge).
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Frontend Implementation' (Protocol in workflow.md)
 
 ## Phase 4: Final Verification
 - [ ] Task: Perform end-to-end testing of the enable/disable flow.
