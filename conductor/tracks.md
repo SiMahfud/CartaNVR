@@ -14,5 +14,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Camera Enable/Disable Toggle**
+- [x] **Track: Camera Enable/Disable Toggle**
 *Link: [./tracks/camera_toggle_20260206/](./tracks/camera_toggle_20260206/)*
