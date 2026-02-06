@@ -1,6 +1,6 @@
 # Implementation Plan: Camera Enable/Disable Toggle
 
-## Phase 1: Database Schema Update
+## Phase 1: Database Schema Update [checkpoint: 7ccc7a1]
 - [x] Task: Create a migration script or update the database initialization to add the `enabled` column to the `cameras` table. 097d6b4
     - [x] Add `enabled` (TINYINT/BOOLEAN) column to `cameras` table with default value `1` (true).
     - [x] Update `lib/database.js` initialization logic to ensure the column exists.
