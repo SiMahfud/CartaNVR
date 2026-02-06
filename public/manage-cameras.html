@@ -147,6 +147,12 @@
               HEVC/H.265 Stream (Will be transcoded to H.264)
             </label>
           </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="edit-camera-enabled" checked>
+            <label class="form-check-label" for="edit-camera-enabled">
+              <strong>Enabled</strong> (Start recording and streaming)
+            </label>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -248,11 +254,14 @@
           const col = document.createElement('div');
           col.classList.add('col');
           const hevcBadge = cam.is_hevc ? '<span class="badge bg-info ms-2">HEVC</span>' : '';
+          const statusBadge = cam.enabled === false ? '<span class="badge bg-secondary ms-2">Disabled</span>' : '';
+          const opacity = cam.enabled === false ? 'style="opacity: 0.7;"' : '';
+          
           col.innerHTML = `
-            <div class="card h-100">
+            <div class="card h-100" ${opacity}>
               <div class="card-body">
                 <div class="d-flex justify-content-between">
-                    <h6 class="card-title fw-bold">${cam.name}${hevcBadge}</h6>
+                    <h6 class="card-title fw-bold">${cam.name}${hevcBadge}${statusBadge}</h6>
                     <small class="text-muted">ID: ${cam.id}</small>
                 </div>
                 <p class="card-text small mb-1">
@@ -402,6 +411,7 @@
             document.getElementById('edit-camera-name').value = camera.name;
             document.getElementById('edit-camera-rtsp').value = camera.rtsp_url;
             document.getElementById('edit-camera-is-hevc').checked = camera.is_hevc || false;
+            document.getElementById('edit-camera-enabled').checked = camera.enabled !== false;
             storageSelect.value = camera.storage_id || '';
             editModal.show();
           }
@@ -415,11 +425,12 @@
         const rtsp_url = document.getElementById('edit-camera-rtsp').value;
         const storage_id = storageSelect.value ? parseInt(storageSelect.value, 10) : null;
         const is_hevc = document.getElementById('edit-camera-is-hevc').checked;
+        const enabled = document.getElementById('edit-camera-enabled').checked;
 
         const response = await fetch(`/api/cameras/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, rtsp_url, storage_id, is_hevc })
+          body: JSON.stringify({ name, rtsp_url, storage_id, is_hevc, enabled })
         });
 
         if (response.ok) {

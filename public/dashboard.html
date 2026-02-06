@@ -77,6 +77,7 @@
         .status-loading { background: rgba(255, 193, 7, 0.9); color: #212529; }
         .status-connected { background: rgba(25, 135, 84, 0.9); color: #fff; }
         .status-disconnected { background: rgba(220, 53, 69, 0.9); color: #fff; }
+        .status-disabled { background: rgba(108, 117, 125, 0.9); color: #fff; }
         .fullscreen-button {
             background: transparent;
             color: #fff;
@@ -296,7 +297,7 @@
             const container = document.getElementById(`camera-container-${cameraId}`);
             if (!container) return;
             const card = container.closest('.camera-card');
-            if (card.style.display === 'none') return;
+            if (card.style.display === 'none' || card.classList.contains('disabled-cam')) return;
             const statusEl = card.querySelector('.camera-status');
             statusEl.textContent = "Loading...";
             statusEl.className = "camera-status status-loading";
@@ -408,23 +409,36 @@
             // Build Camera Grid
             grid.innerHTML = '';
             cameras.forEach(camera => {
+                const isDisabled = camera.enabled === false;
                 const card = document.createElement('div');
-                card.className = "camera-card";
+                card.className = "camera-card" + (isDisabled ? " disabled-cam" : "");
+                if (isDisabled) card.style.opacity = '0.6';
                 card.dataset.cameraId = camera.id;
+                
+                const statusText = isDisabled ? "Disabled" : "Disconnected";
+                const statusClass = isDisabled ? "status-disabled" : "status-disconnected";
+                const fullscreenBtn = isDisabled ? "" : `
+                        <button class="fullscreen-button" data-camera-id="${camera.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/></svg>
+                        </button>`;
+
                 card.innerHTML = `
                     <div class="camera-header">
                         <span class="camera-header-title">${camera.name}</span>
-                        <span class="camera-status status-disconnected">Disconnected</span>
-                        <button class="fullscreen-button" data-camera-id="${camera.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/></svg>
-                        </button>
+                        <span class="camera-status ${statusClass}">${statusText}</span>
+                        ${fullscreenBtn}
                     </div>
-                    <div class="camera-body" id="camera-container-${camera.id}"></div>
+                    <div class="camera-body" id="camera-container-${camera.id}">
+                        ${isDisabled ? '<div class="text-white small">Camera is disabled</div>' : ''}
+                    </div>
                 `;
                 grid.appendChild(card);
-                card.querySelector('.fullscreen-button').addEventListener('click', (e) => {
-                    toggleFullscreen(e.currentTarget.dataset.cameraId);
-                });
+                const fsBtn = card.querySelector('.fullscreen-button');
+                if (fsBtn) {
+                    fsBtn.addEventListener('click', (e) => {
+                        toggleFullscreen(e.currentTarget.dataset.cameraId);
+                    });
+                }
             });
 
             // Initial UI update
