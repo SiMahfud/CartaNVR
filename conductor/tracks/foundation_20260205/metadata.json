@@ -1,0 +1,8 @@
+﻿{
+    "description":  "Perform a system health check, ensure dual-database (SQLite/MySQL) compatibility, and document current schema.",
+    "track_id":  "foundation_20260205",
+    "type":  "maintenance",
+    "created_at":  "2026-02-05T19:12:01Z",
+    "status":  "new",
+    "updated_at":  "2026-02-05T19:12:01Z"
+}

@@ -105,10 +105,40 @@ router.post('/config', isAuthenticated, async (req, res) => {
     // Important: clear cache again in case of error so we don't have a corrupted config state
     delete require.cache[require.resolve('../../lib/config')];
     return res.status(500).json({ error: 'Failed to save config' });
-  }
-});
-
-router.get('/browse', isAuthenticated, (req, res) => {
+      }
+  });
+  
+  router.get('/settings', isAuthenticated, async (req, res) => {
+    try {
+      const keys = ['log_terminal_general', 'log_terminal_recorder', 'log_terminal_storage'];
+      const settings = {};
+      for (const key of keys) {
+        settings[key] = await database.getSetting(key) || '0';
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error('Failed to get settings:', error);
+      res.status(500).json({ error: 'Failed to get settings' });
+    }
+  });
+  
+  router.post('/settings', isAuthenticated, async (req, res) => {
+    try {
+      const settings = req.body;
+      for (const [key, value] of Object.entries(settings)) {
+        if (key.startsWith('log_terminal_')) {
+          await database.setSetting(key, value);
+        }
+      }
+      res.json({ message: 'Settings updated successfully' });
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+      res.status(500).json({ error: 'Failed to update settings' });
+    }
+  });
+  
+  router.get('/browse', isAuthenticated, (req, res) => {
+  
     const isWindows = process.platform === 'win32';
     let currentPath = req.query.path;
     console.log(`Browsing path: ${currentPath}`);

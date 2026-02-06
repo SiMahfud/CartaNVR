@@ -13,5 +13,8 @@
   "FFMPEG_MAX_BACKOFF_MS": 60000,
   "FFMPEG_COOL_OFF_MS": 300000,
   "FFMPEG_WATCHDOG_TIMEOUT_MS": 30000,
-  "pm2_service_name": "Super Simpel NVR"
+  "pm2_service_name": "Super Simpel NVR",
+  "log_terminal_general": true,
+  "log_terminal_recorder": true,
+  "log_terminal_storage": true
 }

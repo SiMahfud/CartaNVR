@@ -10,6 +10,7 @@
 const path = require('path');
 const chokidar = require('chokidar');
 const database = require('./lib/database');
+const logger = require('./lib/logger');
 const { enqueueRemuxJob } = require('./lib/post-processor.js');
 const { syncExistingFilesOnce, periodicSyncDbToDisk, cleanupStorage } = require('./lib/storage.js');
 const { startFFmpegForCamera, stopAllFFmpeg } = require('./lib/ffmpeg-manager.js');
@@ -33,7 +34,7 @@ const lastFilePerDir = new Map();
 function startDirWatcher(dirPath) {
   if (activeWatchers.has(dirPath)) return;
 
-  console.log(`[WATCHER] Memulai watcher untuk direktori: ${dirPath}`);
+  logger.log('recorder', `[WATCHER] Memulai watcher untuk direktori: ${dirPath}`);
   const watcher = chokidar.watch(dirPath, {
     persistent: true,
     depth: 0,
@@ -62,10 +63,10 @@ function startDirWatcher(dirPath) {
  * Memulai semua proses perekaman, sinkronisasi, dan cleanup.
  */
 async function startAllRecordings() {
-  console.log('[RECORDER] Memulai semua layanan...');
+  logger.log('recorder', '[RECORDER] Memulai semua layanan...');
   const cameras = await database.getAllCameras();
   if (!cameras || cameras.length === 0) {
-    console.log('[RECORDER] Tidak ada kamera ditemukan di database.');
+    logger.log('recorder', '[RECORDER] Tidak ada kamera ditemukan di database.');
     return;
   }
 
@@ -87,14 +88,14 @@ async function startAllRecordings() {
     const syncInterval = setInterval(periodicSyncDbToDisk, PERIODIC_SYNC_MS);
     intervals.set('sync', syncInterval);
   }
-  console.log('[RECORDER] Semua layanan telah dimulai.');
+  logger.log('recorder', '[RECORDER] Semua layanan telah dimulai.');
 }
 
 /**
  * Menghentikan semua proses yang berjalan dengan aman.
  */
 async function stopAllRecordings() {
-  console.log('[RECORDER] Menghentikan semua layanan...');
+  logger.log('recorder', '[RECORDER] Menghentikan semua layanan...');
   // 1. Hentikan semua watcher
   for (const [dir, watcher] of activeWatchers.entries()) {
     try {
@@ -114,7 +115,7 @@ async function stopAllRecordings() {
   // 3. Hentikan semua proses FFmpeg
   await stopAllFFmpeg();
 
-  console.log('[RECORDER] Semua layanan telah dihentikan.');
+  logger.log('recorder', '[RECORDER] Semua layanan telah dihentikan.');
 }
 
 module.exports = {

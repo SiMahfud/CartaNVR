@@ -74,6 +74,7 @@
                                 <button class="nav-link active text-start" id="v-pills-storage-tab" data-bs-toggle="pill" data-bs-target="#v-pills-storage" type="button" role="tab"><i class="bi bi-hdd-stack-fill me-2"></i>Storage</button>
                                 <button class="nav-link text-start" id="v-pills-general-tab" data-bs-toggle="pill" data-bs-target="#v-pills-general" type="button" role="tab"><i class="bi bi-sliders me-2"></i>General</button>
                                 <button class="nav-link text-start" id="v-pills-intervals-tab" data-bs-toggle="pill" data-bs-target="#v-pills-intervals" type="button" role="tab"><i class="bi bi-clock-history me-2"></i>Intervals</button>
+                                <button class="nav-link text-start" id="v-pills-logging-tab" data-bs-toggle="pill" data-bs-target="#v-pills-logging" type="button" role="tab"><i class="bi bi-terminal me-2"></i>Terminal Logging</button>
                                 <button class="nav-link text-start" id="v-pills-postproc-tab" data-bs-toggle="pill" data-bs-target="#v-pills-postproc" type="button" role="tab"><i class="bi bi-arrow-repeat me-2"></i>Post-processing</button>
                                 <button class="nav-link text-start" id="v-pills-ffmpeg-tab" data-bs-toggle="pill" data-bs-target="#v-pills-ffmpeg" type="button" role="tab"><i class="bi bi-film me-2"></i>FFmpeg</button>
                                 <button class="nav-link text-start" id="v-pills-maintenance-tab" data-bs-toggle="pill" data-bs-target="#v-pills-maintenance" type="button" role="tab"><i class="bi bi-tools me-2"></i>Maintenance</button>
@@ -109,6 +110,23 @@
                                         <label for="PERIODIC_SYNC_MS" class="form-label">Periodic Sync (minutes)</label>
                                         <input type="number" class="form-control" id="PERIODIC_SYNC_MS" name="PERIODIC_SYNC_MS">
                                         <div class="form-text">How often to sync camera streams (in minutes).</div>
+                                    </div>
+                                </div>
+                                <!-- Logging Tab -->
+                                <div class="tab-pane fade" id="v-pills-logging" role="tabpanel">
+                                    <h4>Terminal Logging</h4>
+                                    <p class="text-muted">Toggle real-time logs in the server terminal.</p>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="log_terminal_general" name="log_terminal_general">
+                                        <label class="form-check-label" for="log_terminal_general">General Server Logs</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="log_terminal_recorder" name="log_terminal_recorder">
+                                        <label class="form-check-label" for="log_terminal_recorder">Recorder Engine Logs</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="log_terminal_storage" name="log_terminal_storage">
+                                        <label class="form-check-label" for="log_terminal_storage">Storage Management Logs</label>
                                     </div>
                                 </div>
                                 <!-- Post-processing Tab -->
@@ -532,6 +550,13 @@
                     document.getElementById('FFMPEG_MAX_BACKOFF_MS').value = config.FFMPEG_MAX_BACKOFF_MS;
                     document.getElementById('FFMPEG_COOL_OFF_MS').value = config.FFMPEG_COOL_OFF_MS;
                     document.getElementById('FFMPEG_WATCHDOG_TIMEOUT_MS').value = config.FFMPEG_WATCHDOG_TIMEOUT_MS;
+
+                    // Fetch Terminal Logging Settings
+                    const logResponse = await fetch('/api/settings');
+                    const logSettings = await logResponse.json();
+                    document.getElementById('log_terminal_general').checked = logSettings.log_terminal_general === '1';
+                    document.getElementById('log_terminal_recorder').checked = logSettings.log_terminal_recorder === '1';
+                    document.getElementById('log_terminal_storage').checked = logSettings.log_terminal_storage === '1';
                 } catch (error) {
                     console.error('Error fetching config:', error);
                 }
@@ -556,11 +581,25 @@
                 newConfig.PERIODIC_SYNC_MS = newConfig.PERIODIC_SYNC_MS * 60 * 1000;
 
                 try {
+                    // Save General Config
                     const response = await fetch('/api/config', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(newConfig)
                     });
+
+                    // Save Terminal Logging Settings
+                    const logSettings = {
+                        log_terminal_general: document.getElementById('log_terminal_general').checked ? '1' : '0',
+                        log_terminal_recorder: document.getElementById('log_terminal_recorder').checked ? '1' : '0',
+                        log_terminal_storage: document.getElementById('log_terminal_storage').checked ? '1' : '0'
+                    };
+                    await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(logSettings)
+                    });
+
                     if (response.ok) {
                         alert('Settings saved successfully!');
                     } else {
