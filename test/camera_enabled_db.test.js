@@ -21,6 +21,10 @@ test('Camera Enabled Database Column', async (t) => {
     // Wait a bit for the async init in lib/database.js to finish
     await new Promise(resolve => setTimeout(resolve, 1000));
 
+    t.after(async () => {
+        await database.close();
+    });
+
     await t.test('should add a camera with default enabled=true', async () => {
         const cam = {
             name: 'Test Cam',

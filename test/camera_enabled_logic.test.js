@@ -24,6 +24,11 @@ const app = require('../app');
 test('Camera Enabled Logic Integration', async (t) => {
     let camId;
 
+    t.after(async () => {
+        await database.close();
+        // The session store also uses the database, so closing it should help.
+    });
+
     t.before(async () => {
         // Wait for DB init
         await new Promise(resolve => setTimeout(resolve, 1000));

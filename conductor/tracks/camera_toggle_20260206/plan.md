@@ -27,7 +27,7 @@
     - [x] Update `public/dashboard.html` to visually indicate if a camera is disabled (e.g., greyed out or a "Disabled" badge).
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Frontend Implementation' (Protocol in workflow.md)
 
-## Phase 4: Final Verification
-- [ ] Task: Perform end-to-end testing of the enable/disable flow.
-- [ ] Task: Verify persistence across server restarts.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Verification' (Protocol in workflow.md)
+## Phase 4: Final Verification [checkpoint: 53da899]
+- [x] Task: Perform end-to-end testing of the enable/disable flow. 53da899
+- [x] Task: Verify persistence across server restarts. 53da899
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Final Verification' (Protocol in workflow.md)
