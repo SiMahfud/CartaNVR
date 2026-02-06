@@ -19,7 +19,7 @@
         - [x] If changed to `true`, trigger the startup of recording for that camera.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: API & Backend Logic' (Protocol in workflow.md)
 
-## Phase 3: Frontend Implementation
+## Phase 3: Frontend Implementation [checkpoint: d33d579]
 - [x] Task: Update "Manage Cameras" UI. 53da899
     - [x] Modify `public/manage-cameras.html` and its associated JS to add the "Enabled" toggle to the Edit Modal.
     - [x] Ensure the toggle state is correctly loaded when opening the modal and sent back to the server on save.
