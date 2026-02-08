@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { validateHost, validateNonEmpty, verifyConnection } = require('../lib/setup-wizard');
+const fs = require('fs');
+const path = require('path');
+const { validateHost, validateNonEmpty, verifyConnection, saveConfig } = require('../lib/setup-wizard');
 
 test('Setup Wizard Validation', async (t) => {
     await t.test('validateNonEmpty should return true for non-empty string', () => {
@@ -73,6 +75,36 @@ test('Connection Verification', async (t) => {
             );
         } finally {
             mockMysql.createConnection = originalCreateConnection;
+        }
+    });
+});
+
+test('Config Persistence', async (t) => {
+    const testEnvPath = path.join(__dirname, '.env.test');
+    
+    await t.test('saveConfig should be a function', () => {
+        assert.strictEqual(typeof saveConfig, 'function');
+    });
+
+    await t.test('saveConfig should write correctly to .env file', async () => {
+        const config = {
+            DB_TYPE: 'mysql',
+            MYSQL_HOST: 'localhost',
+            MYSQL_USER: 'root',
+            MYSQL_PASSWORD: 'password123',
+            MYSQL_DATABASE: 'nvr'
+        };
+
+        try {
+            await saveConfig(config, testEnvPath);
+            const content = fs.readFileSync(testEnvPath, 'utf8');
+            assert.ok(content.includes('DB_TYPE=mysql'));
+            assert.ok(content.includes('MYSQL_HOST=localhost'));
+            assert.ok(content.includes('MYSQL_USER=root'));
+            assert.ok(content.includes('MYSQL_PASSWORD=password123'));
+            assert.ok(content.includes('MYSQL_DATABASE=nvr'));
+        } finally {
+            if (fs.existsSync(testEnvPath)) fs.unlinkSync(testEnvPath);
         }
     });
 });
