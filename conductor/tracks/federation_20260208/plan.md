@@ -10,9 +10,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Authentication and Node Management' (Protocol in workflow.md) 1a4c461
 
 ## Phase 2: Metadata Aggregation and Proxy Logic [checkpoint: pending]
-- [ ] Task: Implement the Federation Client utility.
-    - [ ] Write Tests: Create `test/federation_client.test.js` using `msw` or `nock` to mock remote server responses.
-    - [ ] Implement: Create `lib/federation-client.js` to handle fetching camera lists and health status from remote nodes.
+- [x] Task: Implement the Federation Client utility. 37f3a5a
+    - [x] Write Tests: Create `test/federation_client.test.js` using `msw` or `nock` to mock remote server responses.
+    - [x] Implement: Create `lib/federation-client.js` to handle fetching camera lists and health status from remote nodes.
 - [ ] Task: Update Camera and Health API for aggregation.
     - [ ] Write Tests: Update `test/api_cameras.test.js` to ensure remote cameras are included in the results.
     - [ ] Implement: Modify `routes/api/cameras.js` and `lib/healthcheck.js` to merge data from local and remote nodes.
