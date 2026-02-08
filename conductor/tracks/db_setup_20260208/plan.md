@@ -17,7 +17,7 @@
 - [x] Task: Modify application entry points to trigger the wizard. add9250
     - [ ] Write Tests: Create `test/startup_check.test.js` to ensure the wizard is called when config is missing.
     - [ ] Implement: Update `server.js` or `start.js` to check for required `DB_TYPE` and credentials before initializing the database.
-- [ ] Task: Refactor database initialization for automation.
+- [x] Task: Refactor database initialization for automation. 733632f
     - [ ] Write Tests: Update `test/sqlite_init.test.js` and `test/mysql_init.test.js` to ensure they handle "fresh" installs correctly.
     - [ ] Implement: Ensure `lib/database.js` or equivalent automatically runs schema creation scripts on startup.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Integration with Startup Flow' (Protocol in workflow.md)
