@@ -10,13 +10,17 @@ const app = require('../app');
 const database = require('../lib/database');
 
 test('Settings API', async (t) => {
+    process.env.DB_FILE = './nvr_api_settings_test.db';
     await database.init();
     
     t.after(async () => {
         await database.close();
+        const fs = require('fs');
+        if (fs.existsSync(process.env.DB_FILE)) fs.unlinkSync(process.env.DB_FILE);
     });
 
     t.beforeEach(async () => {
+        // Reset all relevant settings to '0'
         await database.setSetting('log_terminal_general', '0');
         await database.setSetting('log_terminal_recorder', '0');
         await database.setSetting('log_terminal_storage', '0');
