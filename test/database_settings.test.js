@@ -3,6 +3,12 @@ const assert = require('node:assert');
 const database = require('../lib/database');
 
 test('Database Settings Table', async (t) => {
+    await database.init();
+    
+    t.after(async () => {
+        await database.close();
+    });
+
     await t.test('should have getSetting and setSetting functions', () => {
         assert.strictEqual(typeof database.getSetting, 'function', 'getSetting should be a function');
         assert.strictEqual(typeof database.setSetting, 'function', 'setSetting should be a function');

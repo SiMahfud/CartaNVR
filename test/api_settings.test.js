@@ -10,6 +10,12 @@ const app = require('../app');
 const database = require('../lib/database');
 
 test('Settings API', async (t) => {
+    await database.init();
+    
+    t.after(async () => {
+        await database.close();
+    });
+
     t.beforeEach(async () => {
         await database.setSetting('log_terminal_general', '0');
         await database.setSetting('log_terminal_recorder', '0');

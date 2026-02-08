@@ -16,6 +16,8 @@ async function initialize() {
   await checkConfig();
   
   const database = require('./lib/database');
+  await database.init();
+  
   const logger = require('./lib/logger');
   const config = require('./lib/config');
   const recorder = require('./recorder');

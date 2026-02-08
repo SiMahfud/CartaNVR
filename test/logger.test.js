@@ -6,9 +6,13 @@ const database = require('../lib/database');
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 test('Centralized Logger', async (t) => {
-    // Wait for DB init
-    await delay(500);
+    // Init DB
+    await database.init();
     
+    t.after(async () => {
+        await database.close();
+    });
+
     const logger = require('../lib/logger');
     const originalLog = console.log;
     let logOutput = [];

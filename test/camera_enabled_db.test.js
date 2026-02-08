@@ -6,7 +6,8 @@ const path = require('node:path');
 // Set environment for test
 process.env.NODE_ENV = 'test';
 process.env.DB_TYPE = 'sqlite';
-const dbFile = './nvr_test.db';
+const dbFile = './nvr_db_test_unique.db';
+process.env.DB_FILE = dbFile;
 
 // Clean up before starting
 if (fs.existsSync(dbFile)) {
@@ -18,8 +19,7 @@ if (fs.existsSync(dbFile)) {
 const database = require('../lib/database');
 
 test('Camera Enabled Database Column', async (t) => {
-    // Wait a bit for the async init in lib/database.js to finish
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await database.init();
 
     t.after(async () => {
         await database.close();
