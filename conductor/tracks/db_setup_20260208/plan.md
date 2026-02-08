@@ -5,7 +5,7 @@
     - [ ] Write Tests: Create `test/setup_wizard.test.js` to verify prompt logic and input validation.
     - [ ] Implement: Use a library like `inquirer` or `enquirer` (check existing usage first) to create the interactive CLI.
     - [ ] Implement: Add validation for MySQL host, user, and password.
-- [ ] Task: Implement connection verification logic.
+- [x] Task: Implement connection verification logic. 6c952c3
     - [ ] Write Tests: Mock database connections to test success and failure scenarios in the wizard.
     - [ ] Implement: Add a function to test MySQL/MariaDB connectivity using `mysql2`.
 - [ ] Task: Implement `.env` persistence logic.
