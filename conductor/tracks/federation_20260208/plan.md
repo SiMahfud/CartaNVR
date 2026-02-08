@@ -18,7 +18,7 @@
     - [x] Implement: Modify `routes/api/cameras.js` and `lib/healthcheck.js` to merge data from local and remote nodes.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Metadata Aggregation and Proxy Logic' (Protocol in workflow.md) 59d6e26
 
-## Phase 3: Auto-Discovery and Frontend [checkpoint: pending]
+## Phase 3: Auto-Discovery and Frontend [checkpoint: 21f44ce]
 - [x] Task: Implement mDNS/Bonjour Auto-Discovery. 8843c23
     - [x] Write Tests: Create `test/discovery.test.js` to verify NVR service advertisement and detection.
     - [x] Implement: Use `bonjour` or similar library to advertise the NVR service and scan for other instances.
@@ -26,7 +26,7 @@
     - [x] Implement: Add "Remote Nodes" tab to settings.
     - [x] Implement: Update dashboard to display node labels on camera cards and health widgets.
     - [x] Implement: Update video players to use absolute URLs for remote streams.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Auto-Discovery and Frontend' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Auto-Discovery and Frontend' (Protocol in workflow.md) 21f44ce
 
 ## Phase 4: Recording Integration and Polishing [checkpoint: pending]
 - [ ] Task: Implement Cross-Node Recording Search.
