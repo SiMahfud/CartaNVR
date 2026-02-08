@@ -19,9 +19,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Metadata Aggregation and Proxy Logic' (Protocol in workflow.md) 59d6e26
 
 ## Phase 3: Auto-Discovery and Frontend [checkpoint: pending]
-- [ ] Task: Implement mDNS/Bonjour Auto-Discovery.
-    - [ ] Write Tests: Create `test/discovery.test.js` to verify NVR service advertisement and detection.
-    - [ ] Implement: Use `bonjour` or similar library to advertise the NVR service and scan for other instances.
+- [x] Task: Implement mDNS/Bonjour Auto-Discovery. 8843c23
+    - [x] Write Tests: Create `test/discovery.test.js` to verify NVR service advertisement and detection.
+    - [x] Implement: Use `bonjour` or similar library to advertise the NVR service and scan for other instances.
 - [ ] Task: Update Dashboard and Settings UI.
     - [ ] Implement: Add "Remote Nodes" tab to settings.
     - [ ] Implement: Update dashboard to display node labels on camera cards and health widgets.
