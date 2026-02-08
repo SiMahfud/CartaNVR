@@ -1,6 +1,8 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 const config = require('./lib/config');
+const database = require('./lib/database');
 
 // Modul untuk Autentikasi
 const session = require('express-session');
@@ -9,6 +11,36 @@ const passport = require('passport');
 const initializePassport = require('./lib/passport-config');
 
 const app = express();
+
+// Konfigurasi CORS Dinamis untuk Federation
+const corsOptions = {
+  origin: async (origin, callback) => {
+    // Izinkan jika tidak ada origin (seperti permintaan server-to-server atau lokal)
+    if (!origin) return callback(null, true);
+    
+    try {
+      // Izinkan origin sendiri (local loopback dan hostname saat ini)
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+
+      // Periksa apakah origin terdaftar di remote_nodes
+      await database.init();
+      const remoteNodes = await database.getAllRemoteNodes();
+      if (remoteNodes.some(node => origin.startsWith(node.url))) {
+        return callback(null, true);
+      }
+
+      // Jika tidak cocok, tolak
+      callback(new Error('Not allowed by CORS'));
+    } catch (err) {
+      callback(err);
+    }
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // Middleware dasar
 app.use(express.json());
