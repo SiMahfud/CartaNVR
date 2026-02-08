@@ -15,6 +15,9 @@
 - `DB_TYPE`: `sqlite` (default) or `mysql`
 - `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` for MySQL configuration.
 
+## Environment Management
+- **Dotenv:** `dotenv` for managing environment variables via `.env` files.
+
 ## Video & Camera Processing
 - **Engine:** FFmpeg (`ffmpeg-static`, `ffprobe-static`) untuk pemrosesan stream RTSP dan transcoding.
 - **Protocol:** ONVIF (`node-onvif`) untuk penemuan dan manajemen kamera IP secara otomatis.
