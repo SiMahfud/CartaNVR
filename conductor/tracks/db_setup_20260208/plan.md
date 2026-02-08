@@ -8,7 +8,7 @@
 - [x] Task: Implement connection verification logic. 6c952c3
     - [ ] Write Tests: Mock database connections to test success and failure scenarios in the wizard.
     - [ ] Implement: Add a function to test MySQL/MariaDB connectivity using `mysql2`.
-- [ ] Task: Implement `.env` persistence logic.
+- [x] Task: Implement `.env` persistence logic. 250938a
     - [ ] Write Tests: Verify that valid inputs are correctly written to the `.env` file.
     - [ ] Implement: Use `fs` to write/update environment variables.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Interactive Setup Utility' (Protocol in workflow.md)
