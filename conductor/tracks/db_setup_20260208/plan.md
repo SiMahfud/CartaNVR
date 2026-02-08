@@ -23,7 +23,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Integration with Startup Flow' (Protocol in workflow.md)
 
 ## Phase 3: Documentation and Polishing [checkpoint: pending]
-- [ ] Task: Update `README.md` with database setup instructions.
+- [x] Task: Update `README.md` with database setup instructions. dc83ab4
     - [ ] Implement: Add a "Getting Started" section explaining the auto-setup feature and manual configuration options.
     - [ ] Implement: Add a visual/step-by-step guide for SQLite vs. MySQL choice.
 - [ ] Task: Final end-to-end verification.
