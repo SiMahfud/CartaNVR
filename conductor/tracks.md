@@ -24,5 +24,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Multi-Server Federation**
+- [x] **Track: Multi-Server Federation**
 *Link: [./tracks/federation_20260208/](./tracks/federation_20260208/)*
