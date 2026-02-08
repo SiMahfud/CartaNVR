@@ -1,0 +1,8 @@
+{
+  "track_id": "db_setup_20260208",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-08T18:37:00Z",
+  "updated_at": "2026-02-08T18:37:00Z",
+  "description": "aplikasi ini dimaksudkan agar support 2 jenis database, yaitu sqlite dan mariadb/mysql. tolong buat agar pengaturan database nya mudah. misal memilih sqlite atau mysql untuk database nya."
+}

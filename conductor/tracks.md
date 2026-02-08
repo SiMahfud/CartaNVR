@@ -16,3 +16,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Camera Enable/Disable Toggle**
 *Link: [./tracks/camera_toggle_20260206/](./tracks/camera_toggle_20260206/)*
+
+---
+
+- [~] **Track: Easy Database Configuration and Setup**
+*Link: [./tracks/db_setup_20260208/](./tracks/db_setup_20260208/)*
