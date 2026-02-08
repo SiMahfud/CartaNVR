@@ -14,7 +14,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Interactive Setup Utility' (Protocol in workflow.md) 0a0efc7
 
 ## Phase 2: Integration with Startup Flow [checkpoint: pending]
-- [ ] Task: Modify application entry points to trigger the wizard.
+- [x] Task: Modify application entry points to trigger the wizard. add9250
     - [ ] Write Tests: Create `test/startup_check.test.js` to ensure the wizard is called when config is missing.
     - [ ] Implement: Update `server.js` or `start.js` to check for required `DB_TYPE` and credentials before initializing the database.
 - [ ] Task: Refactor database initialization for automation.
