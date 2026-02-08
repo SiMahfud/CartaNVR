@@ -13,7 +13,7 @@
     - [x] Implement: Use `fs` to write/update environment variables.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Interactive Setup Utility' (Protocol in workflow.md) 0a0efc7
 
-## Phase 2: Integration with Startup Flow [checkpoint: pending]
+## Phase 2: Integration with Startup Flow [checkpoint: 6e4ec59]
 - [x] Task: Modify application entry points to trigger the wizard. add9250
     - [x] Write Tests: Create `test/startup_check.test.js` to ensure the wizard is called when config is missing.
     - [x] Implement: Update `server.js` or `start.js` to check for required `DB_TYPE` and credentials before initializing the database.
