@@ -13,6 +13,7 @@ A simple Network Video Recorder (NVR) application designed to manage IP cameras,
 
 ## Key Features
 - **Automated Discovery:** Seamless identification and management of cameras using the ONVIF protocol.
+- **Multi-Server Federation:** Connect multiple NVR instances to view cameras, recordings, and system health in a single unified dashboard.
 - **Interactive Setup Wizard:** A user-friendly CLI guide that automates initial database configuration and connection verification.
 - **Individual Camera Control:** Ability to enable or disable specific cameras to manage resources and recording activity.
 - **Multi-format Streaming:** Support for various live streaming formats (DASH, HLS, JSMPEG) to ensure compatibility across different browsers and devices.

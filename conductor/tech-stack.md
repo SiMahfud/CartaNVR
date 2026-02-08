@@ -28,5 +28,7 @@
 
 ## Utilities
 - **CLI Interaction:** `inquirer` untuk wizard setup database interaktif.
+- **Network Discovery:** `bonjour-service` for mDNS/Bonjour federation discovery.
+- **Cross-Origin:** `cors` for secure inter-node browser communication.
 - **File Monitoring:** `chokidar` untuk memantau perubahan pada direktori rekaman.
 - **Process Management:** Mendukung `pm2` (via `start.js`).
