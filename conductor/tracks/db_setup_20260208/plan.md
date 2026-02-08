@@ -22,11 +22,11 @@
     - [x] Implement: Ensure `lib/database.js` or equivalent automatically runs schema creation scripts on startup.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Integration with Startup Flow' (Protocol in workflow.md)
 
-## Phase 3: Documentation and Polishing [checkpoint: pending]
+## Phase 3: Documentation and Polishing [checkpoint: bfb3afe]
 - [x] Task: Update `README.md` with database setup instructions. dc83ab4
     - [ ] Implement: Add a "Getting Started" section explaining the auto-setup feature and manual configuration options.
     - [ ] Implement: Add a visual/step-by-step guide for SQLite vs. MySQL choice.
-- [ ] Task: Final end-to-end verification.
-    - [ ] Task: Verify that a fresh clone correctly triggers the setup.
-    - [ ] Task: Verify that an existing `.env` bypasses the setup.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Documentation and Polishing' (Protocol in workflow.md)
+- [x] Task: Final end-to-end verification.
+    - [x] Task: Verify that a fresh clone correctly triggers the setup.
+    - [x] Task: Verify that an existing `.env` bypasses the setup.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Documentation and Polishing' (Protocol in workflow.md)
