@@ -1,13 +1,13 @@
 # Implementation Plan: Multi-Server Federation
 
-## Phase 1: Authentication and Node Management [checkpoint: pending]
+## Phase 1: Authentication and Node Management [checkpoint: 1a4c461]
 - [x] Task: Implement API Key generation and storage for federation. 24f747f
     - [x] Write Tests: Create `test/federation_auth.test.js` to verify API key generation and middleware validation.
     - [x] Implement: Add `federation_key` to the `settings` table and create a secure middleware to validate `X-NVR-Auth` headers.
 - [x] Task: Create the Remote Nodes database schema and API. e16bbcb
     - [x] Write Tests: Create `test/remote_nodes_api.test.js` to verify CRUD operations for remote servers.
     - [x] Implement: Create `remote_nodes` table in `lib/database.js` and implement `/api/system/nodes` endpoints.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Authentication and Node Management' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Authentication and Node Management' (Protocol in workflow.md) 1a4c461
 
 ## Phase 2: Metadata Aggregation and Proxy Logic [checkpoint: pending]
 - [ ] Task: Implement the Federation Client utility.
