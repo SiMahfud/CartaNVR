@@ -1,0 +1,8 @@
+{
+  "track_id": "federation_20260208",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-08T20:39:00Z",
+  "updated_at": "2026-02-08T20:39:00Z",
+  "description": "Misal aplikasi ini saya install di 2 server terpisah, bagaimana agar bisa terhubung antar server, atau server 1 bisa memutar live view dari server 2 maupun melihat hasil recordingnya. APa diberi fitur API antar server begitu? bagaimana agar efisien dan mudah?"
+}

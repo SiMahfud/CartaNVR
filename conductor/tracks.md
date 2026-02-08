@@ -21,3 +21,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Easy Database Configuration and Setup**
 *Link: [./tracks/db_setup_20260208/](./tracks/db_setup_20260208/)*
+
+---
+
+- [~] **Track: Multi-Server Federation**
+*Link: [./tracks/federation_20260208/](./tracks/federation_20260208/)*
