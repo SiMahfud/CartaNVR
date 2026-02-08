@@ -163,7 +163,7 @@
         const darkToggle = document.getElementById('dark-toggle');
         const body = document.body;
 
-        // --- Cookie and Theme Logic (Unchanged) ---
+        // --- Cookie and Theme Logic ---
         const setCookie = (name, value, days) => {
             let expires = "";
             if (days) {
@@ -277,7 +277,10 @@
         });
 
         window.addEventListener('message', (event) => {
-            if (event.origin !== window.location.origin) return;
+            if (event.origin !== window.location.origin) {
+                // Also allow messages from remote nodes if they are in federation
+                if (!allCameras.some(c => c.nodeUrl && event.origin === c.nodeUrl)) return;
+            }
             const data = event.data;
             if (data.type === 'reload' && data.cameraId) {
                 stopPlayer(data.cameraId);
@@ -298,11 +301,25 @@
             if (!container) return;
             const card = container.closest('.camera-card');
             if (card.style.display === 'none' || card.classList.contains('disabled-cam')) return;
+            
+            // Find camera data
+            const camera = allCameras.find(c => String(c.id) === String(cameraId));
+            if (!camera) return;
+
             const statusEl = card.querySelector('.camera-status');
             statusEl.textContent = "Loading...";
             statusEl.className = "camera-status status-loading";
             const iframe = document.createElement('iframe');
-            iframe.src = 'dash-player.html?cam=' + cameraId;
+            
+            // If remote, use the remote server's dash player directly
+            if (camera.isRemote && camera.nodeUrl) {
+                // We need to strip the prefix 'remote_...' to get the original ID for the remote server
+                const originalId = String(camera.id).split('_').pop();
+                iframe.src = `${camera.nodeUrl}/dash-player.html?cam=${originalId}`;
+            } else {
+                iframe.src = 'dash-player.html?cam=' + cameraId;
+            }
+
             iframe.allow = "fullscreen";
             iframe.style.border = '0';
             iframe.onload = () => {
@@ -335,15 +352,18 @@
             const iframe = iframes[cameraId];
             if (iframe && iframe.contentWindow) {
                 // Send a message to the player inside the iframe
-                iframe.contentWindow.postMessage({ type: 'requestFullscreen' }, window.location.origin);
+                iframe.contentWindow.postMessage({ type: 'requestFullscreen' }, "*");
             } else {
                 console.error('Could not find iframe or content window for camera:', cameraId);
             }
         };
         
+        let allCameras = [];
+        
         try {
             const response = await fetch('/api/cameras');
             const cameras = await response.json();
+            allCameras = cameras;
             if (!cameras || cameras.length === 0) {
                 grid.innerHTML = `<div class="alert alert-info w-100" role="alert">No cameras have been added. Go to the <a href="/manage-cameras" class="alert-link">Camera Manager</a> to add one.</div>`;
                 return;
@@ -375,11 +395,12 @@
             cameras.forEach(camera => {
                 const isChecked = visibleCameras.includes(String(camera.id));
                 const li = document.createElement('li');
+                const label = camera.isRemote ? `${camera.name} (${camera.nodeLabel})` : camera.name;
                 li.innerHTML = `
                     <div class="dropdown-item">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="cam-check-${camera.id}" data-camera-id="${camera.id}" ${isChecked ? 'checked' : ''}>
-                            <label class="form-check-label" for="cam-check-${camera.id}">${camera.name}</label>
+                            <label class="form-check-label" for="cam-check-${camera.id}">${label}</label>
                         </div>
                     </div>`;
                 dropdownMenu.appendChild(li);
@@ -417,14 +438,15 @@
                 
                 const statusText = isDisabled ? "Disabled" : "Disconnected";
                 const statusClass = isDisabled ? "status-disabled" : "status-disconnected";
+                const nodeBadge = camera.isRemote ? `<span class="badge bg-primary ms-2" style="font-size: 0.6rem;">${camera.nodeLabel}</span>` : "";
                 const fullscreenBtn = isDisabled ? "" : `
                         <button class="fullscreen-button" data-camera-id="${camera.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096-4.096a.5.5 0 0 1 0 .707z"/></svg>
                         </button>`;
 
                 card.innerHTML = `
                     <div class="camera-header">
-                        <span class="camera-header-title">${camera.name}</span>
+                        <span class="camera-header-title text-truncate">${camera.name} ${nodeBadge}</span>
                         <span class="camera-status ${statusClass}">${statusText}</span>
                         ${fullscreenBtn}
                     </div>

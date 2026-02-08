@@ -26,7 +26,9 @@ router.post('/scan', isAuthenticated, async (req, res) => {
 
 router.get('/playback/:cameraId', isAuthenticated, async (req, res) => {
   try {
-    const cameraId = req.params.cameraId.replace('cam_', '');
+    const rawId = req.params.cameraId.replace('cam_', '');
+    const isRemote = rawId.startsWith('remote_');
+    
     const now = new Date();
     const defaultStart = new Date(now.getTime() - (24 * 60 * 60 * 1000));
     const startTime = req.query.start ? new Date(req.query.start).getTime() : defaultStart.getTime();
@@ -36,12 +38,43 @@ router.get('/playback/:cameraId', isAuthenticated, async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format for start or end time.' });
     }
 
-    const segments = await database.getRecordings(cameraId, startTime, endTime);
+    if (isRemote) {
+      // Logic for remote playback search
+      const parts = rawId.split('_');
+      const nodeId = parts[1];
+      const originalCamId = parts[2];
+      
+      const remoteNodes = await database.getAllRemoteNodes();
+      const node = remoteNodes.find(n => String(n.id) === String(nodeId));
+      
+      if (!node) return res.status(404).json({ error: 'Remote node not found' });
+
+      // Fetch from remote
+      const query = `?start=${startTime}&end=${endTime}`;
+      const response = await fetch(`${node.url}/api/playback/cam_${originalCamId}${query}`, {
+        headers: { 'X-NVR-Auth': node.api_key },
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) throw new Error('Remote node error');
+      
+      const segments = await response.json();
+      // Correct the playback URLs to be absolute
+      const correctedSegments = segments.map(s => ({
+        ...s,
+        file: s.file.startsWith('http') ? s.file : `${node.url}${s.file}`
+      }));
+      
+      return res.json(correctedSegments);
+    }
+
+    // Local playback logic
+    const segments = await database.getRecordings(rawId, startTime, endTime);
     res.json(segments);
 
   } catch (err) {
-    console.error("Server error fetching playback from DB:", err);
-    res.status(500).json({ error: 'Failed to read recordings from database' });
+    console.error("Server error fetching playback:", err);
+    res.status(500).json({ error: 'Failed to read recordings' });
   }
 });
 

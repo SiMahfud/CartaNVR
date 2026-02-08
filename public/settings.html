@@ -77,6 +77,7 @@
                                 <button class="nav-link text-start" id="v-pills-logging-tab" data-bs-toggle="pill" data-bs-target="#v-pills-logging" type="button" role="tab"><i class="bi bi-terminal me-2"></i>Terminal Logging</button>
                                 <button class="nav-link text-start" id="v-pills-postproc-tab" data-bs-toggle="pill" data-bs-target="#v-pills-postproc" type="button" role="tab"><i class="bi bi-arrow-repeat me-2"></i>Post-processing</button>
                                 <button class="nav-link text-start" id="v-pills-ffmpeg-tab" data-bs-toggle="pill" data-bs-target="#v-pills-ffmpeg" type="button" role="tab"><i class="bi bi-film me-2"></i>FFmpeg</button>
+                                <button class="nav-link text-start" id="v-pills-federation-tab" data-bs-toggle="pill" data-bs-target="#v-pills-federation" type="button" role="tab"><i class="bi bi-diagram-3-fill me-2"></i>Remote Nodes</button>
                                 <button class="nav-link text-start" id="v-pills-maintenance-tab" data-bs-toggle="pill" data-bs-target="#v-pills-maintenance" type="button" role="tab"><i class="bi bi-tools me-2"></i>Maintenance</button>
                             </div>
                         </div>
@@ -91,11 +92,20 @@
                                 </div>
                                 <!-- General Tab -->
                                 <div class="tab-pane fade" id="v-pills-general" role="tabpanel">
-                                    <h4>General Storage Settings</h4>
+                                    <h4>General Settings</h4>
                                     <div class="mb-3">
                                         <label for="pm2_service_name" class="form-label">PM2 Service Name</label>
                                         <input type="text" class="form-control" id="pm2_service_name" name="pm2_service_name">
                                         <div class="form-text">The name of the service in PM2. Requires a restart to take full effect.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="federation_key" class="form-label">Federation API Key</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="federation_key" readonly>
+                                            <button class="btn btn-outline-secondary" type="button" id="copy-fed-key-btn">Copy</button>
+                                            <button class="btn btn-outline-primary" type="button" id="gen-fed-key-btn">Generate New</button>
+                                        </div>
+                                        <div class="form-text">Give this key to other NVR instances to allow them to connect to this server.</div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval (minutes)</label>
@@ -181,6 +191,26 @@
                                         <input type="number" class="form-control" id="FFMPEG_WATCHDOG_TIMEOUT_MS" name="FFMPEG_WATCHDOG_TIMEOUT_MS">
                                     </div>
                                 </div>
+                                <!-- Federation Tab -->
+                                <div class="tab-pane fade" id="v-pills-federation" role="tabpanel">
+                                    <h4>Multi-Server Federation</h4>
+                                    <p class="text-muted">Connect to other NVR instances to view their cameras and recordings.</p>
+                                    
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">Discover Nodes</div>
+                                        <div class="card-body">
+                                            <p class="small text-muted">Scan the local network for other NVR servers.</p>
+                                            <button type="button" class="btn btn-outline-primary btn-sm mb-3" id="discover-nodes-btn">
+                                                <i class="bi bi-search"></i> Scan Local Network
+                                            </button>
+                                            <div id="discovery-results" class="list-group list-group-flush"></div>
+                                        </div>
+                                    </div>
+
+                                    <h5>Linked Remote Nodes</h5>
+                                    <div id="remote-nodes-list" class="list-group mb-3"></div>
+                                    <button type="button" class="btn btn-primary" id="add-node-btn"><i class="bi bi-plus-circle"></i> Add Remote Node</button>
+                                </div>
                                 <!-- Maintenance Tab -->
                                 <div class="tab-pane fade" id="v-pills-maintenance" role="tabpanel">
                                     <h4>Maintenance</h4>
@@ -258,6 +288,39 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <!-- Remote Node Modal -->
+    <div class="modal fade" id="node-modal" tabindex="-1" aria-labelledby="nodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="nodeModalLabel">Remote Node Configuration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="node-form">
+                        <input type="hidden" id="node-id">
+                        <div class="mb-3">
+                            <label for="node-label" class="form-label">Friendly Label</label>
+                            <input type="text" class="form-control" id="node-label" placeholder="e.g. Home, Office" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="node-url" class="form-label">Remote URL</label>
+                            <input type="url" class="form-control" id="node-url" placeholder="http://192.168.1.100:3000" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="node-key" class="form-label">API Key</label>
+                            <input type="text" class="form-control" id="node-key" placeholder="Enter the federation key from the remote server" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-node-btn">Save Node</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Storage Modal -->
@@ -338,8 +401,20 @@
             const selectDirBtn = document.getElementById('select-dir-btn');
             const browseStoragePathBtn = document.getElementById('browse-storage-path-btn');
 
+            const nodeModal = new bootstrap.Modal(document.getElementById('node-modal'));
+            const nodeForm = document.getElementById('node-form');
+            const nodeIdInput = document.getElementById('node-id');
+            const nodeLabelInput = document.getElementById('node-label');
+            const nodeUrlInput = document.getElementById('node-url');
+            const nodeKeyInput = document.getElementById('node-key');
+            const saveNodeBtn = document.getElementById('save-node-btn');
+            const remoteNodesListEl = document.getElementById('remote-nodes-list');
+            const discoverNodesBtn = document.getElementById('discover-nodes-btn');
+            const discoveryResultsEl = document.getElementById('discovery-results');
+
             let currentBrowserPath = null;
             let storages = [];
+            let remoteNodes = [];
 
             // --- Dark Mode Logic ---
             const darkToggle = document.getElementById('dark-toggle');
@@ -385,6 +460,146 @@
             applyTheme();
             // --- End Dark Mode Logic ---
 
+            // --- Federation Logic ---
+            const renderRemoteNodes = () => {
+                remoteNodesListEl.innerHTML = '';
+                if (remoteNodes.length === 0) {
+                    remoteNodesListEl.innerHTML = '<p class="text-muted small">No remote nodes linked.</p>';
+                    return;
+                }
+                remoteNodes.forEach(node => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <div>
+                            <h6 class="mb-0">${node.label}</h6>
+                            <small class="text-muted">${node.url}</small>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1 edit-node-btn" data-id="${node.id}"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-node-btn" data-id="${node.id}"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                    remoteNodesListEl.appendChild(item);
+                });
+            };
+
+            const loadRemoteNodes = async () => {
+                try {
+                    const response = await fetch('/api/system/nodes');
+                    remoteNodes = await response.json();
+                    renderRemoteNodes();
+                } catch (error) {
+                    console.error('Error loading remote nodes:', error);
+                }
+            };
+
+            document.getElementById('add-node-btn').addEventListener('click', () => {
+                nodeForm.reset();
+                nodeIdInput.value = '';
+                nodeModal.show();
+            });
+
+            remoteNodesListEl.addEventListener('click', e => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const id = btn.dataset.id;
+                if (btn.classList.contains('edit-node-btn')) {
+                    const node = remoteNodes.find(n => n.id == id);
+                    if (node) {
+                        nodeIdInput.value = node.id;
+                        nodeLabelInput.value = node.label;
+                        nodeUrlInput.value = node.url;
+                        nodeKeyInput.value = node.api_key;
+                        nodeModal.show();
+                    }
+                } else if (btn.classList.contains('delete-node-btn')) {
+                    if (confirm('Unlink this remote node?')) {
+                        fetch(`/api/system/nodes/${id}`, { method: 'DELETE' }).then(loadRemoteNodes);
+                    }
+                }
+            });
+
+            saveNodeBtn.addEventListener('click', async () => {
+                const id = nodeIdInput.value;
+                const data = {
+                    label: nodeLabelInput.value,
+                    url: nodeUrlInput.value,
+                    api_key: nodeKeyInput.value
+                };
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/system/nodes/${id}` : '/api/system/nodes';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    nodeModal.hide();
+                    loadRemoteNodes();
+                } else {
+                    alert('Failed to save node');
+                }
+            });
+
+            discoverNodesBtn.addEventListener('click', async () => {
+                discoverNodesBtn.disabled = true;
+                discoverNodesBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Scanning...';
+                discoveryResultsEl.innerHTML = '';
+                
+                try {
+                    const response = await fetch('/api/system/discover');
+                    const found = await response.json();
+                    
+                    if (found.length === 0) {
+                        discoveryResultsEl.innerHTML = '<div class="list-group-item small text-muted">No other NVRs found on the network.</div>';
+                    } else {
+                        found.forEach(node => {
+                            const item = document.createElement('button');
+                            item.type = 'button';
+                            item.className = 'list-group-item list-group-item-action text-start';
+                            item.innerHTML = `
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-bold">${node.name}</div>
+                                        <div class="small text-muted">${node.url}</div>
+                                    </div>
+                                    <i class="bi bi-plus-lg text-primary"></i>
+                                </div>
+                            `;
+                            item.onclick = () => {
+                                nodeForm.reset();
+                                nodeIdInput.value = '';
+                                nodeLabelInput.value = node.name;
+                                nodeUrlInput.value = node.url;
+                                nodeModal.show();
+                            };
+                            discoveryResultsEl.appendChild(item);
+                        });
+                    }
+                } catch (err) {
+                    discoveryResultsEl.innerHTML = '<div class="list-group-item text-danger small">Scan failed.</div>';
+                } finally {
+                    discoverNodesBtn.disabled = false;
+                    discoverNodesBtn.innerHTML = '<i class="bi bi-search"></i> Scan Local Network';
+                }
+            });
+
+            document.getElementById('gen-fed-key-btn').addEventListener('click', async () => {
+                if (!confirm('Generating a new key will invalidate any existing connections to this server. Continue?')) return;
+                const newKey = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+                document.getElementById('federation_key').value = newKey;
+            });
+
+            document.getElementById('copy-fed-key-btn').addEventListener('click', () => {
+                const el = document.getElementById('federation_key');
+                el.select();
+                document.execCommand('copy');
+                alert('Key copied to clipboard!');
+            });
+            // --- End Federation Logic ---
+
             // --- Storage Management Logic ---
             const renderStorages = () => {
                 storageListEl.innerHTML = '';
@@ -401,8 +616,8 @@
                             <small class="text-muted">${storage.path} (${storage.max_gb} GB)</small>
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-outline-primary me-2 edit-storage-btn" data-id="${storage.id}"><i class="bi bi-pencil"></i> Edit</button>
-                            <button class="btn btn-sm btn-outline-danger delete-storage-btn" data-id="${storage.id}"><i class="bi bi-trash"></i> Delete</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary me-2 edit-storage-btn" data-id="${storage.id}"><i class="bi bi-pencil"></i> Edit</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-storage-btn" data-id="${storage.id}"><i class="bi bi-trash"></i> Delete</button>
                         </div>
                     `;
                     storageListEl.appendChild(item);
@@ -557,6 +772,9 @@
                     document.getElementById('log_terminal_general').checked = logSettings.log_terminal_general === '1';
                     document.getElementById('log_terminal_recorder').checked = logSettings.log_terminal_recorder === '1';
                     document.getElementById('log_terminal_storage').checked = logSettings.log_terminal_storage === '1';
+                    if (logSettings.federation_key) {
+                        document.getElementById('federation_key').value = logSettings.federation_key;
+                    }
                 } catch (error) {
                     console.error('Error fetching config:', error);
                 }
@@ -592,7 +810,8 @@
                     const logSettings = {
                         log_terminal_general: document.getElementById('log_terminal_general').checked ? '1' : '0',
                         log_terminal_recorder: document.getElementById('log_terminal_recorder').checked ? '1' : '0',
-                        log_terminal_storage: document.getElementById('log_terminal_storage').checked ? '1' : '0'
+                        log_terminal_storage: document.getElementById('log_terminal_storage').checked ? '1' : '0',
+                        federation_key: document.getElementById('federation_key').value
                     };
                     await fetch('/api/settings', {
                         method: 'POST',
@@ -713,6 +932,7 @@
             // Initial Load
             loadStorages();
             loadGeneralSettings();
+            loadRemoteNodes();
         });
     </script>
 </body>

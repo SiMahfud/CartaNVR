@@ -267,7 +267,10 @@
         try {
           const res = await fetch('/api/cameras');
           cameras = await res.json();
-          els.cameraSelect.innerHTML = cameras.map(c => `<option value="${c.id}">${c.name || c.id}</option>`).join('');
+          els.cameraSelect.innerHTML = cameras.map(c => {
+            const label = c.isRemote ? `${c.name} (${c.nodeLabel})` : c.name;
+            return `<option value="${c.id}">${label}</option>`;
+          }).join('');
           if (els.cameraSelect.options.length) {
             els.cameraSelect.selectedIndex = 0;
             await onFilter(false); // Muat data dengan filter default, jangan autoplay
