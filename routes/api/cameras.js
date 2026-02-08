@@ -2,15 +2,24 @@ const express = require('express');
 const router = express.Router();
 const database = require('../../lib/database');
 const { isAuthenticated } = require('../../lib/middleware');
+const fedClient = require('../../lib/federation-client');
 
 // Semua rute di sini sudah diawali dengan /api dari server.js, dan /cameras dari api/index.js
 
 // GET /api/cameras
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    const cameras = await database.getAllCameras();
-    res.json(cameras);
+    const localCameras = await database.getAllCameras();
+    
+    // Fetch remote cameras
+    const remoteNodes = await database.getAllRemoteNodes();
+    const remoteCamerasPromises = remoteNodes.map(node => fedClient.getRemoteCameras(node));
+    const remoteCamerasResults = await Promise.all(remoteCamerasPromises);
+    const remoteCameras = remoteCamerasResults.flat();
+
+    res.json([...localCameras, ...remoteCameras]);
   } catch (error) {
+    console.error('Failed to aggregate cameras:', error);
     res.status(500).json({ error: 'Failed to retrieve cameras' });
   }
 });
