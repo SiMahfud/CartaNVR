@@ -24,5 +24,6 @@
 - **Encryption:** `bcryptjs` untuk hashing password.
 
 ## Utilities
+- **CLI Interaction:** `inquirer` untuk wizard setup database interaktif.
 - **File Monitoring:** `chokidar` untuk memantau perubahan pada direktori rekaman.
 - **Process Management:** Mendukung `pm2` (via `start.js`).
