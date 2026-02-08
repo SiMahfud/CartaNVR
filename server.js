@@ -1,14 +1,28 @@
 const http = require('http');
 const app = require('./app');
-const database = require('./lib/database');
-const logger = require('./lib/logger');
-const config = require('./lib/config');
-const recorder = require('./recorder');
+const setupWizard = require('./lib/setup-wizard');
 
-const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+async function checkConfig() {
+  if (!process.env.DB_TYPE) {
+    const config = await setupWizard.runWizard();
+    await setupWizard.verifyConnection(config);
+    await setupWizard.saveConfig(config);
+    // Reload environment variables after saving
+    require('dotenv').config({ override: true });
+  }
+}
 
 async function initialize() {
+  await checkConfig();
+  
+  const database = require('./lib/database');
+  const logger = require('./lib/logger');
+  const config = require('./lib/config');
+  const recorder = require('./recorder');
+
+  const server = http.createServer(app);
+  const PORT = process.env.PORT || 3000;
+
   // Buat user admin default jika belum ada
   try {
     const admin = await database.findUserByUsername(config.defaultAdminUser);
