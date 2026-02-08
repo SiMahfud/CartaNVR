@@ -28,10 +28,10 @@
     - [x] Implement: Update video players to use absolute URLs for remote streams.
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Auto-Discovery and Frontend' (Protocol in workflow.md) 21f44ce
 
-## Phase 4: Recording Integration and Polishing [checkpoint: pending]
-- [ ] Task: Implement Cross-Node Recording Search.
-    - [ ] Write Tests: Verify that recording search results include remote files with correct playback URLs.
-    - [ ] Implement: Update `routes/api/recordings.js` to query remote nodes for footage.
-- [ ] Task: Final CORS and Security Audit.
-    - [ ] Implement: Ensure dynamic CORS configuration allows direct browser access to remote nodes.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Recording Integration and Polishing' (Protocol in workflow.md)
+## Phase 4: Recording Integration and Polishing [checkpoint: c9a506e]
+- [x] Task: Implement Cross-Node Recording Search. f1b79e4
+    - [x] Write Tests: Verify that recording search results include remote files with correct playback URLs.
+    - [x] Implement: Update `routes/api/recordings.js` to query remote nodes for footage.
+- [x] Task: Final CORS and Security Audit. c9a506e
+    - [x] Implement: Ensure dynamic CORS configuration allows direct browser access to remote nodes.
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Recording Integration and Polishing' (Protocol in workflow.md) c9a506e
