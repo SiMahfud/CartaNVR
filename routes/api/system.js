@@ -109,35 +109,54 @@ router.post('/config', isAuthenticated, async (req, res) => {
   });
   
   router.get('/settings', isAuthenticated, async (req, res) => {
-    try {
-      const keys = ['log_terminal_general', 'log_terminal_recorder', 'log_terminal_storage'];
-      const settings = {};
-      for (const key of keys) {
-        settings[key] = await database.getSetting(key) || '0';
-      }
-      res.json(settings);
-    } catch (error) {
-      console.error('Failed to get settings:', error);
-      res.status(500).json({ error: 'Failed to get settings' });
-    }
+// ... existing settings code
   });
   
-  router.post('/settings', isAuthenticated, async (req, res) => {
-    try {
-      const settings = req.body;
-      for (const [key, value] of Object.entries(settings)) {
-        if (key.startsWith('log_terminal_')) {
-          await database.setSetting(key, value);
-        }
-      }
-      res.json({ message: 'Settings updated successfully' });
-    } catch (error) {
-      console.error('Failed to update settings:', error);
-      res.status(500).json({ error: 'Failed to update settings' });
-    }
+router.post('/settings', isAuthenticated, async (req, res) => {
+// ... existing settings code
   });
+
+router.get('/system/nodes', isAuthenticated, async (req, res) => {
+  try {
+    const nodes = await database.getAllRemoteNodes();
+    res.json(nodes);
+  } catch (error) {
+    console.error('Failed to get remote nodes:', error);
+    res.status(500).json({ error: 'Failed to get remote nodes' });
+  }
+});
+
+router.post('/system/nodes', isAuthenticated, async (req, res) => {
+  try {
+    const node = await database.addRemoteNode(req.body);
+    res.status(201).json(node);
+  } catch (error) {
+    console.error('Failed to add remote node:', error);
+    res.status(500).json({ error: 'Failed to add remote node' });
+  }
+});
+
+router.put('/system/nodes/:id', isAuthenticated, async (req, res) => {
+  try {
+    const node = await database.updateRemoteNode(req.params.id, req.body);
+    res.json(node);
+  } catch (error) {
+    console.error('Failed to update remote node:', error);
+    res.status(500).json({ error: 'Failed to update remote node' });
+  }
+});
+
+router.delete('/system/nodes/:id', isAuthenticated, async (req, res) => {
+  try {
+    await database.deleteRemoteNode(req.params.id);
+    res.json({ message: 'Remote node deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete remote node:', error);
+    res.status(500).json({ error: 'Failed to delete remote node' });
+  }
+});
   
-  router.get('/browse', isAuthenticated, (req, res) => {
+router.get('/browse', isAuthenticated, (req, res) => {
   
     const isWindows = process.platform === 'win32';
     let currentPath = req.query.path;
