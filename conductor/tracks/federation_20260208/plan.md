@@ -22,10 +22,10 @@
 - [x] Task: Implement mDNS/Bonjour Auto-Discovery. 8843c23
     - [x] Write Tests: Create `test/discovery.test.js` to verify NVR service advertisement and detection.
     - [x] Implement: Use `bonjour` or similar library to advertise the NVR service and scan for other instances.
-- [ ] Task: Update Dashboard and Settings UI.
-    - [ ] Implement: Add "Remote Nodes" tab to settings.
-    - [ ] Implement: Update dashboard to display node labels on camera cards and health widgets.
-    - [ ] Implement: Update video players to use absolute URLs for remote streams.
+- [x] Task: Update Dashboard and Settings UI. 37f3a5a
+    - [x] Implement: Add "Remote Nodes" tab to settings.
+    - [x] Implement: Update dashboard to display node labels on camera cards and health widgets.
+    - [x] Implement: Update video players to use absolute URLs for remote streams.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Auto-Discovery and Frontend' (Protocol in workflow.md)
 
 ## Phase 4: Recording Integration and Polishing [checkpoint: pending]
