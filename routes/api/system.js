@@ -147,13 +147,24 @@ router.put('/system/nodes/:id', isAuthenticated, async (req, res) => {
 });
 
 router.delete('/system/nodes/:id', isAuthenticated, async (req, res) => {
-  try {
-    await database.deleteRemoteNode(req.params.id);
-    res.json({ message: 'Remote node deleted successfully' });
-  } catch (error) {
-    console.error('Failed to delete remote node:', error);
-    res.status(500).json({ error: 'Failed to delete remote node' });
-  }
+// ...
+  });
+
+router.get('/system/discover', isAuthenticated, async (req, res) => {
+  const discovery = require('../../lib/discovery');
+  const foundNodes = [];
+  
+  discovery.scan((node) => {
+    if (!foundNodes.some(n => n.url === node.url)) {
+      foundNodes.push(node);
+    }
+  });
+
+  // Scan for 5 seconds then return results
+  setTimeout(() => {
+    discovery.stopScanning();
+    res.json(foundNodes);
+  }, 5000);
 });
   
 router.get('/browse', isAuthenticated, (req, res) => {

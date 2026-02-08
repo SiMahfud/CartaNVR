@@ -40,6 +40,15 @@ async function initialize() {
 
   server.listen(PORT, () => {
     logger.log('general', `Server is running on http://localhost:${PORT}`);
+    
+    // Start discovery advertisement
+    try {
+      const discovery = require('./lib/discovery');
+      discovery.startAdvertising(process.env.NVR_NAME || 'My NVR', PORT);
+    } catch (err) {
+      console.error('Failed to start discovery advertisement:', err);
+    }
+
     // Pindahkan start recording ke sini agar admin user sudah siap
     recorder.startAllRecordings();
   });
