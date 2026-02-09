@@ -17,10 +17,16 @@ const corsOptions = {
   origin: async (origin, callback) => {
     // Izinkan jika tidak ada origin (seperti permintaan server-to-server atau lokal)
     if (!origin) return callback(null, true);
-    
+
     try {
       // Izinkan origin sendiri (local loopback dan hostname saat ini)
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+
+      // Izinkan IP lokal/private network (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      const privateIpPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?/;
+      if (privateIpPattern.test(origin)) {
         return callback(null, true);
       }
 
