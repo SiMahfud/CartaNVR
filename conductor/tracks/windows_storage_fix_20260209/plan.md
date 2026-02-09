@@ -2,9 +2,9 @@
 
 This plan details the steps to replace the deprecated `wmic` command with `systeminformation` for robust Windows drive listing and to enhance the `/api/system/browse` endpoint.
 
-## Phase 1: Dependency and Environment Setup
+## Phase 1: Dependency and Environment Setup [checkpoint: 265d5d3]
 - [x] Task: Install `systeminformation` dependency. [ba48ab7]
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Refactor Drive Listing and Enhance API
 - [ ] Task: Create a unit test in `test/browse_api.test.js` to verify the `/api/system/browse` endpoint, specifically mocking Windows drive listing.
