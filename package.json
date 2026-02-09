@@ -29,6 +29,7 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "sqlite3": "^5.1.6",
+    "systeminformation": "^5.30.7",
     "ws": "^8.13.0"
   },
   "devDependencies": {
