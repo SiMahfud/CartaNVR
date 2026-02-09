@@ -24,8 +24,8 @@
 
 ## Phase 3: Documentation and Polishing [checkpoint: bfb3afe]
 - [x] Task: Update `README.md` with database setup instructions. dc83ab4
-    - [ ] Implement: Add a "Getting Started" section explaining the auto-setup feature and manual configuration options.
-    - [ ] Implement: Add a visual/step-by-step guide for SQLite vs. MySQL choice.
+    - [x] Implement: Add a "Getting Started" section explaining the auto-setup feature and manual configuration options.
+    - [x] Implement: Add a visual/step-by-step guide for SQLite vs. MySQL choice.
 - [x] Task: Final end-to-end verification.
     - [x] Task: Verify that a fresh clone correctly triggers the setup.
     - [x] Task: Verify that an existing `.env` bypasses the setup.
