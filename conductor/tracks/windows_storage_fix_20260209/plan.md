@@ -14,6 +14,6 @@ This plan details the steps to replace the deprecated `wmic` command with `syste
 - [x] Task: Verify that all tests pass, including the new unit tests and existing system tests. [8c274f8]
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
-## Phase 3: Final Verification
-- [~] Task: Perform a final end-to-end check of the storage browsing feature in the UI (if possible) or via manual API calls.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
+## Phase 3: Final Verification [checkpoint: c07f300]
+- [x] Task: Perform a final end-to-end check of the storage browsing feature in the UI (if possible) or via manual API calls. [c07f300]
+- [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
