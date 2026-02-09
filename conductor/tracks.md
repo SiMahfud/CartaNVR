@@ -30,4 +30,17 @@ This file tracks all major tracks for the project. Each track has its own detail
 ---
 
 - [x] **Track: Fix Settings Save and Database Sync**
+
 *Link: [./tracks/settings_fix_20260209/](./tracks/settings_fix_20260209/)*
+
+
+
+---
+
+
+
+- [~] **Track: Fix Windows Drive Listing and Enhance Storage Browsing**
+
+
+
+*Link: [./tracks/windows_storage_fix_20260209/](./tracks/windows_storage_fix_20260209/)*
