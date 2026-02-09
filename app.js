@@ -12,6 +12,26 @@ const initializePassport = require('./lib/passport-config');
 
 const app = express();
 
+// Parse CORS whitelist dari .env (comma-separated, support wildcard *.domain.com)
+const corsWhitelist = (process.env.CORS_WHITELIST || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+function isOriginWhitelisted(origin) {
+  try {
+    const hostname = new URL(origin).hostname;
+    return corsWhitelist.some(pattern => {
+      if (pattern.startsWith('*.')) {
+        // Wildcard: cocokkan domain utama dan semua subdomain
+        const baseDomain = pattern.slice(2); // hapus "*."
+        return hostname === baseDomain || hostname.endsWith('.' + baseDomain);
+      }
+      return hostname === pattern;
+    });
+  } catch { return false; }
+}
+
 // Konfigurasi CORS Dinamis untuk Federation
 const corsOptions = {
   origin: async (origin, callback) => {
@@ -27,6 +47,11 @@ const corsOptions = {
       // Izinkan IP lokal/private network (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
       const privateIpPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?/;
       if (privateIpPattern.test(origin)) {
+        return callback(null, true);
+      }
+
+      // Periksa whitelist dari .env (CORS_WHITELIST)
+      if (isOriginWhitelisted(origin)) {
         return callback(null, true);
       }
 
