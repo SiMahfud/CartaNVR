@@ -71,10 +71,10 @@ router.get('/playback/:cameraId', isAuthenticatedOrFederated, async (req, res) =
       }
 
       const segments = await response.json();
-      // Correct the playback URLs to be absolute
+      // Correct the playback URLs to be absolute and include auth key
       const correctedSegments = segments.map(s => ({
         ...s,
-        file: s.file.startsWith('http') ? s.file : `${node.url}${s.file}`
+        file: s.file.startsWith('http') ? s.file : `${node.url}${s.file}?api_key=${node.api_key}`
       }));
 
       return res.json(correctedSegments);

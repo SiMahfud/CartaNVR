@@ -4,11 +4,11 @@ const path = require('path');
 const fs = require('fs');
 const database = require('../../lib/database');
 const { sanitizeCamId } = require('../../lib/utils');
-const { isAuthenticated } = require('../../lib/middleware');
+const { isAuthenticated, isAuthenticatedOrFederated } = require('../../lib/middleware');
 
 // Base path: /api/recordings
 
-router.get('/:cameraId/:filename', isAuthenticated, async (req, res) => {
+router.get('/:cameraId/:filename', isAuthenticatedOrFederated, async (req, res) => {
     try {
         const { cameraId, filename } = req.params;
         const camId = sanitizeCamId(cameraId.replace('cam_', ''));
