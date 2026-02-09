@@ -39,7 +39,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 
 
-- [~] **Track: Fix Windows Drive Listing and Enhance Storage Browsing**
+- [x] **Track: Fix Windows Drive Listing and Enhance Storage Browsing**
 
 
 
