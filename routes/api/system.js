@@ -32,8 +32,14 @@ router.get('/playback/:cameraId', isAuthenticatedOrFederated, async (req, res) =
 
     const now = new Date();
     const defaultStart = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-    const startTime = req.query.start ? new Date(req.query.start).getTime() : defaultStart.getTime();
-    const endTime = req.query.end ? new Date(req.query.end).getTime() : now.getTime();
+    const parseTime = (t) => {
+      if (!t) return null;
+      if (/^\d+$/.test(t)) return parseInt(t, 10);
+      return new Date(t).getTime();
+    };
+
+    const startTime = req.query.start ? parseTime(req.query.start) : defaultStart.getTime();
+    const endTime = req.query.end ? parseTime(req.query.end) : now.getTime();
 
     if (isNaN(startTime) || isNaN(endTime)) {
       return res.status(400).json({ error: 'Invalid date format for start or end time.' });
