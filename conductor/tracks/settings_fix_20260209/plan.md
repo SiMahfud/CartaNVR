@@ -25,7 +25,7 @@
     - [x] Implement: Remove or comment out file-writing logic that targets `config.json` in favor of database updates.
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Logic Synchronization & Cleanup' (Protocol in workflow.md)
 
-## Phase 4: Final Verification
+## Phase 4: Final Verification [checkpoint: e90b908]
 - [x] Task: End-to-end verification of settings persistence. 39eb5b3
 - [x] Task: Verify settings survive application restart. 39eb5b3
-- [~] Task: Conductor - User Manual Verification 'Phase 4: Final Verification' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Final Verification' (Protocol in workflow.md) e90b908
