@@ -747,85 +747,117 @@
             // --- General Settings Form Logic ---
             const loadGeneralSettings = async () => {
                 try {
-                    const response = await fetch('/api/config');
-                    const config = await response.json();
-                    if (config.pm2_service_name) {
-                        document.getElementById('pm2_service_name').value = config.pm2_service_name;
-                    }
-                    document.getElementById('CLEANUP_INTERVAL_MS').value = config.CLEANUP_INTERVAL_MS / (60 * 1000);
-                    document.getElementById('PERIODIC_SYNC_MS').value = config.PERIODIC_SYNC_MS / (60 * 1000);
-                    document.getElementById('FASTSTART_POSTPROC').checked = config.FASTSTART_POSTPROC;
-                    document.getElementById('POSTPROC_DELAY_MS').value = config.POSTPROC_DELAY_MS;
-                    document.getElementById('POSTPROC_STABLE_MS').value = config.POSTPROC_STABLE_MS;
-                    document.getElementById('POSTPROC_MAX_RETRY').value = config.POSTPROC_MAX_RETRY;
-                    document.getElementById('POSTPROC_RETRY_BACKOFF').value = config.POSTPROC_RETRY_BACKOFF;
-                    document.getElementById('QUEUE_CONCURRENCY').value = config.QUEUE_CONCURRENCY;
-                    document.getElementById('FFMPEG_MAX_RETRY').value = config.FFMPEG_MAX_RETRY;
-                    document.getElementById('FFMPEG_BASE_BACKOFF_MS').value = config.FFMPEG_BASE_BACKOFF_MS;
-                    document.getElementById('FFMPEG_MAX_BACKOFF_MS').value = config.FFMPEG_MAX_BACKOFF_MS;
-                    document.getElementById('FFMPEG_COOL_OFF_MS').value = config.FFMPEG_COOL_OFF_MS;
-                    document.getElementById('FFMPEG_WATCHDOG_TIMEOUT_MS').value = config.FFMPEG_WATCHDOG_TIMEOUT_MS;
+                    // Fetch all settings from database
+                    const response = await fetch('/api/settings');
+                    const settings = await response.json();
+                    
+                    // Fallback to config if database is empty for these keys
+                    const configRes = await fetch('/api/config');
+                    const config = await configRes.json();
 
-                    // Fetch Terminal Logging Settings
-                    const logResponse = await fetch('/api/settings');
-                    const logSettings = await logResponse.json();
-                    document.getElementById('log_terminal_general').checked = logSettings.log_terminal_general === '1';
-                    document.getElementById('log_terminal_recorder').checked = logSettings.log_terminal_recorder === '1';
-                    document.getElementById('log_terminal_storage').checked = logSettings.log_terminal_storage === '1';
-                    if (logSettings.federation_key) {
-                        document.getElementById('federation_key').value = logSettings.federation_key;
+                    const getValue = (key) => {
+                        if (settings[key] !== undefined) return settings[key];
+                        return config[key];
+                    };
+
+                    const setVal = (id, key, isInterval = false) => {
+                        const val = getValue(key);
+                        if (val !== undefined) {
+                            document.getElementById(id).value = isInterval ? (val / (60 * 1000)) : val;
+                        }
+                    };
+
+                    const setChecked = (id, key) => {
+                        const val = getValue(key);
+                        if (val !== undefined) {
+                            document.getElementById(id).checked = (val === '1' || val === true);
+                        }
+                    };
+
+                    setVal('pm2_service_name', 'pm2_service_name');
+                    setVal('CLEANUP_INTERVAL_MS', 'CLEANUP_INTERVAL_MS', true);
+                    setVal('PERIODIC_SYNC_MS', 'PERIODIC_SYNC_MS', true);
+                    
+                    setChecked('FASTSTART_POSTPROC', 'FASTSTART_POSTPROC');
+                    setVal('POSTPROC_DELAY_MS', 'POSTPROC_DELAY_MS');
+                    setVal('POSTPROC_STABLE_MS', 'POSTPROC_STABLE_MS');
+                    setVal('POSTPROC_MAX_RETRY', 'POSTPROC_MAX_RETRY');
+                    setVal('POSTPROC_RETRY_BACKOFF', 'POSTPROC_RETRY_BACKOFF');
+                    setVal('QUEUE_CONCURRENCY', 'QUEUE_CONCURRENCY');
+                    
+                    setVal('FFMPEG_MAX_RETRY', 'FFMPEG_MAX_RETRY');
+                    setVal('FFMPEG_BASE_BACKOFF_MS', 'FFMPEG_BASE_BACKOFF_MS');
+                    setVal('FFMPEG_MAX_BACKOFF_MS', 'FFMPEG_MAX_BACKOFF_MS');
+                    setVal('FFMPEG_COOL_OFF_MS', 'FFMPEG_COOL_OFF_MS');
+                    setVal('FFMPEG_WATCHDOG_TIMEOUT_MS', 'FFMPEG_WATCHDOG_TIMEOUT_MS');
+
+                    setChecked('log_terminal_general', 'log_terminal_general');
+                    setChecked('log_terminal_recorder', 'log_terminal_recorder');
+                    setChecked('log_terminal_storage', 'log_terminal_storage');
+                    
+                    if (settings.federation_key) {
+                        document.getElementById('federation_key').value = settings.federation_key;
+                    } else if (config.federation_key) {
+                        document.getElementById('federation_key').value = config.federation_key;
                     }
                 } catch (error) {
-                    console.error('Error fetching config:', error);
+                    console.error('Error fetching settings:', error);
                 }
             };
 
             settingsForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const formData = new FormData(settingsForm);
-                const newConfig = {};
-                for (const [key, value] of formData.entries()) {
+                const allSettings = {};
+                
+                // Process all form elements
+                for (let [key, value] of formData.entries()) {
                     const input = settingsForm.elements[key];
                     if (input.type === 'checkbox') {
-                        newConfig[key] = input.checked;
+                        allSettings[key] = input.checked ? '1' : '0';
                     } else if (input.type === 'number') {
-                        newConfig[key] = Number(value);
+                        // Convert back to original values if needed (e.g. intervals)
+                        if (key === 'CLEANUP_INTERVAL_MS' || key === 'PERIODIC_SYNC_MS') {
+                            allSettings[key] = String(Number(value) * 60 * 1000);
+                        } else {
+                            allSettings[key] = String(value);
+                        }
                     } else {
-                        newConfig[key] = value;
+                        allSettings[key] = value;
                     }
                 }
 
-                newConfig.CLEANUP_INTERVAL_MS = newConfig.CLEANUP_INTERVAL_MS * 60 * 1000;
-                newConfig.PERIODIC_SYNC_MS = newConfig.PERIODIC_SYNC_MS * 60 * 1000;
+                // Explicitly add fields that might not be in FormData (e.g. readonly or custom handled)
+                allSettings.federation_key = document.getElementById('federation_key').value;
 
                 try {
-                    // Save General Config
-                    const response = await fetch('/api/config', {
+                    const response = await fetch('/api/settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newConfig)
-                    });
-
-                    // Save Terminal Logging Settings
-                    const logSettings = {
-                        log_terminal_general: document.getElementById('log_terminal_general').checked ? '1' : '0',
-                        log_terminal_recorder: document.getElementById('log_terminal_recorder').checked ? '1' : '0',
-                        log_terminal_storage: document.getElementById('log_terminal_storage').checked ? '1' : '0',
-                        federation_key: document.getElementById('federation_key').value
-                    };
-                    await fetch('/api/settings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(logSettings)
+                        body: JSON.stringify(allSettings)
                     });
 
                     if (response.ok) {
-                        alert('Settings saved successfully!');
+                        const toast = document.createElement('div');
+                        toast.className = 'position-fixed bottom-0 end-0 p-3';
+                        toast.style.zIndex = '11';
+                        toast.innerHTML = `
+                            <div class="toast show align-items-center text-white bg-success border-0" role="alert">
+                                <div class="d-flex">
+                                    <div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>Settings saved successfully to database!</div>
+                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3000);
                     } else {
-                        alert(`Error saving settings: ${await response.text()}`);
+                        const errorText = await response.text();
+                        alert(`Error saving settings: ${errorText}`);
                     }
                 } catch (error) {
-                    console.error('Error saving config:', error);
+                    console.error('Error saving settings:', error);
+                    alert('Failed to connect to the server.');
                 }
             });
 

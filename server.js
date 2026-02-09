@@ -18,8 +18,12 @@ async function initialize() {
   const database = require('./lib/database');
   await database.init();
   
-  const logger = require('./lib/logger');
   const config = require('./lib/config');
+  if (config.syncWithDatabase) {
+    await config.syncWithDatabase();
+  }
+  
+  const logger = require('./lib/logger');
   const recorder = require('./recorder');
 
   const server = http.createServer(app);

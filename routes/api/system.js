@@ -78,75 +78,76 @@ router.get('/playback/:cameraId', isAuthenticated, async (req, res) => {
   }
 });
 
-router.get('/config', isAuthenticated, (req, res) => {
-  delete require.cache[require.resolve('../../lib/config')];
+router.get('/config', isAuthenticated, async (req, res) => {
   const config = require('../../lib/config');
+  if (config.syncWithDatabase) {
+    await config.syncWithDatabase();
+  }
   res.json(config);
 });
 
 router.post('/config', isAuthenticated, async (req, res) => {
-  const configPath = path.join(__dirname, '..', '..', 'lib', 'config.json');
+  // Deprecation Notice: We are moving towards database-backed settings.
+  // This route now updates the database instead of config.json.
   
-  // 1. Get old config by requiring it (it will be cached)
   const oldConfig = require('../../lib/config');
   const oldServiceName = oldConfig.pm2_service_name;
 
   try {
-    const newConfig = req.body;
-    const newServiceName = newConfig.pm2_service_name;
+    const newSettings = req.body;
+    const newServiceName = newSettings.pm2_service_name;
 
-    // Read existing user config from file to merge
-    let existingConfig = {};
-    if (fs.existsSync(configPath)) {
-      const rawData = fs.readFileSync(configPath);
-      existingConfig = JSON.parse(rawData);
+    // 1. Save all incoming fields to database
+    for (const [key, value] of Object.entries(newSettings)) {
+      await database.setSetting(key, String(value));
     }
-
-    // 2. Save the new config to file
-    const updatedConfig = { ...existingConfig, ...newConfig };
-    fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
     
-    // Clear require cache to ensure next require gets the new version
-    delete require.cache[require.resolve('../../lib/config')];
+    // 2. Sync the in-memory config object
+    if (oldConfig.syncWithDatabase) {
+      await oldConfig.syncWithDatabase();
+    }
     
-    // 3. Check if service name has changed and handle PM2 restart
+    // 3. Handle PM2 restart if service name changed
     if (newServiceName && oldServiceName && newServiceName !== oldServiceName) {
       console.log(`PM2 service name changed from "${oldServiceName}" to "${newServiceName}". Restarting service...`);
-      
-      // Use `pm2 delete` which stops and removes. Add `|| true` so the command doesn't fail if the old service doesn't exist.
       const restartCommand = `(pm2 delete "${oldServiceName}" || true) && pm2 start server.js --name "${newServiceName}"`;
       
-      console.log(`Executing: ${restartCommand}`);
-
       exec(restartCommand, { windowsHide: true }, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Failed to restart PM2 service: ${error.message}`);
-        }
-        if (stdout) console.log('PM2 restart command stdout:', stdout);
-        if (stderr) console.warn('PM2 restart command stderr:', stderr);
+        if (error) console.error(`Failed to restart PM2 service: ${error.message}`);
       });
 
-      // Respond immediately, the restart happens in the background
-      return res.status(200).json({ message: 'Config updated. Application is restarting with the new PM2 service name.' });
-
+      return res.status(200).json({ message: 'Config updated in database. Application is restarting with the new PM2 service name.' });
     } else {
-      return res.status(200).json({ message: 'Config updated successfully.' });
+      return res.status(200).json({ message: 'Config updated in database successfully.' });
     }
 
   } catch (error) {
-    console.error('Failed to save config:', error);
-    // Important: clear cache again in case of error so we don't have a corrupted config state
-    delete require.cache[require.resolve('../../lib/config')];
-    return res.status(500).json({ error: 'Failed to save config' });
-      }
-  });
+    console.error('Failed to save config to database:', error);
+    return res.status(500).json({ error: 'Failed to save config to database' });
+  }
+});
   
   router.get('/settings', isAuthenticated, async (req, res) => {
-// ... existing settings code
+    try {
+      const settings = await database.getAllSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Failed to get settings:', error);
+      res.status(500).json({ error: 'Failed to get settings' });
+    }
   });
   
 router.post('/settings', isAuthenticated, async (req, res) => {
-// ... existing settings code
+    try {
+      const newSettings = req.body;
+      for (const [key, value] of Object.entries(newSettings)) {
+        await database.setSetting(key, String(value));
+      }
+      res.json({ message: 'Settings updated successfully' });
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+      res.status(500).json({ error: 'Failed to update settings' });
+    }
   });
 
 router.get('/system/nodes', isAuthenticated, async (req, res) => {
@@ -180,8 +181,14 @@ router.put('/system/nodes/:id', isAuthenticated, async (req, res) => {
 });
 
 router.delete('/system/nodes/:id', isAuthenticated, async (req, res) => {
-// ...
-  });
+  try {
+    await database.deleteRemoteNode(req.params.id);
+    res.json({ message: 'Remote node deleted' });
+  } catch (error) {
+    console.error('Failed to delete remote node:', error);
+    res.status(500).json({ error: 'Failed to delete remote node' });
+  }
+});
 
 router.get('/system/discover', isAuthenticated, async (req, res) => {
   const discovery = require('../../lib/discovery');

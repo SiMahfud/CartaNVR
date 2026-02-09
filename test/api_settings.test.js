@@ -20,15 +20,17 @@ test('Settings API', async (t) => {
     });
 
     t.beforeEach(async () => {
-        // Reset all relevant settings to '0'
+        // Reset all relevant settings
         await database.setSetting('log_terminal_general', '0');
         await database.setSetting('log_terminal_recorder', '0');
         await database.setSetting('log_terminal_storage', '0');
+        await database.setSetting('server_port', '3000');
+        await database.setSetting('recording_path', './recordings');
     });
 
-    await t.test('GET /api/settings should return all logging settings', async () => {
+    await t.test('GET /api/settings should return all settings', async () => {
         await database.setSetting('log_terminal_general', '1');
-        await database.setSetting('log_terminal_recorder', '0');
+        await database.setSetting('server_port', '8080');
         
         const response = await request(app)
             .get('/api/settings')
@@ -36,20 +38,22 @@ test('Settings API', async (t) => {
             .expect(200);
             
         assert.strictEqual(response.body.log_terminal_general, '1');
-        assert.strictEqual(response.body.log_terminal_recorder, '0');
-        assert.strictEqual(response.body.log_terminal_storage, '0'); // default
+        assert.strictEqual(response.body.server_port, '8080');
+        assert.strictEqual(response.body.recording_path, './recordings');
     });
 
-    await t.test('POST /api/settings should update settings', async () => {
+    await t.test('POST /api/settings should update multiple settings', async () => {
         await request(app)
             .post('/api/settings')
-            .send({ log_terminal_storage: '1', log_terminal_general: '0' })
+            .send({ 
+                log_terminal_storage: '1', 
+                server_port: '9000',
+                recording_path: '/mnt/data' 
+            })
             .expect(200);
             
-        const storageVal = await database.getSetting('log_terminal_storage');
-        const generalVal = await database.getSetting('log_terminal_general');
-        
-        assert.strictEqual(storageVal, '1');
-        assert.strictEqual(generalVal, '0');
+        assert.strictEqual(await database.getSetting('log_terminal_storage'), '1');
+        assert.strictEqual(await database.getSetting('server_port'), '9000');
+        assert.strictEqual(await database.getSetting('recording_path'), '/mnt/data');
     });
 });
