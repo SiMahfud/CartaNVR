@@ -6,6 +6,7 @@ const path = require('path');
 const onvifScanner = require('../../lib/onvif-scanner');
 const database = require('../../lib/database');
 const { isAuthenticated } = require('../../lib/middleware');
+const utils = require('../../lib/utils');
 
 // Note: The /api prefix is handled by the main app.
 // These routes are mounted under /api
@@ -207,7 +208,7 @@ router.get('/system/discover', isAuthenticated, async (req, res) => {
   }, 5000);
 });
   
-router.get('/browse', isAuthenticated, (req, res) => {
+router.get('/browse', isAuthenticated, async (req, res) => {
   
     const isWindows = process.platform === 'win32';
     let currentPath = req.query.path;
@@ -216,23 +217,18 @@ router.get('/browse', isAuthenticated, (req, res) => {
     if (!currentPath) {
         if (isWindows) {
             console.log('No path, listing drives (Windows)');
-            exec('wmic logicaldisk get name', { windowsHide: true }, (err, stdout) => {
-                if (err) {
-                    console.error('Error getting drives:', err);
-                    return res.status(500).json({ error: 'Failed to get drives' });
-                }
-                const drives = stdout.split('\r\n').slice(1).map(line => line.trim()).filter(line => line.length > 0).map(drive => ({
-                    name: drive,
-                    path: drive + '\\'
-                }));
-                res.json({
+            try {
+                const drives = await utils.getDrives();
+                return res.json({
                     currentPath: 'Computer',
                     parentDir: null,
                     isRoot: true,
                     directories: drives
                 });
-            });
-            return;
+            } catch (err) {
+                console.error('Error getting drives:', err);
+                return res.status(500).json({ error: 'Failed to get drives' });
+            }
         } else {
             console.log('No path, starting at / (Linux/macOS)');
             currentPath = '/';
