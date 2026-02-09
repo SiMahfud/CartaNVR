@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const onvifScanner = require('../../lib/onvif-scanner');
 const database = require('../../lib/database');
-const { isAuthenticated } = require('../../lib/middleware');
+const { isAuthenticated, isAuthenticatedOrFederated } = require('../../lib/middleware');
 const utils = require('../../lib/utils');
 
 // Note: The /api prefix is handled by the main app.
@@ -25,11 +25,11 @@ router.post('/scan', isAuthenticated, async (req, res) => {
   }
 });
 
-router.get('/playback/:cameraId', isAuthenticated, async (req, res) => {
+router.get('/playback/:cameraId', isAuthenticatedOrFederated, async (req, res) => {
   try {
     const rawId = req.params.cameraId.replace('cam_', '');
     const isRemote = rawId.startsWith('remote_');
-    
+
     const now = new Date();
     const defaultStart = new Date(now.getTime() - (24 * 60 * 60 * 1000));
     const startTime = req.query.start ? new Date(req.query.start).getTime() : defaultStart.getTime();
@@ -44,10 +44,10 @@ router.get('/playback/:cameraId', isAuthenticated, async (req, res) => {
       const parts = rawId.split('_');
       const nodeId = parts[1];
       const originalCamId = parts[2];
-      
+
       const remoteNodes = await database.getAllRemoteNodes();
       const node = remoteNodes.find(n => String(n.id) === String(nodeId));
-      
+
       if (!node) return res.status(404).json({ error: 'Remote node not found' });
 
       // Fetch from remote
@@ -58,14 +58,14 @@ router.get('/playback/:cameraId', isAuthenticated, async (req, res) => {
       });
 
       if (!response.ok) throw new Error('Remote node error');
-      
+
       const segments = await response.json();
       // Correct the playback URLs to be absolute
       const correctedSegments = segments.map(s => ({
         ...s,
         file: s.file.startsWith('http') ? s.file : `${node.url}${s.file}`
       }));
-      
+
       return res.json(correctedSegments);
     }
 
@@ -90,7 +90,7 @@ router.get('/config', isAuthenticated, async (req, res) => {
 router.post('/config', isAuthenticated, async (req, res) => {
   // Deprecation Notice: We are moving towards database-backed settings.
   // This route now updates the database instead of config.json.
-  
+
   const oldConfig = require('../../lib/config');
   const oldServiceName = oldConfig.pm2_service_name;
 
@@ -102,17 +102,17 @@ router.post('/config', isAuthenticated, async (req, res) => {
     for (const [key, value] of Object.entries(newSettings)) {
       await database.setSetting(key, String(value));
     }
-    
+
     // 2. Sync the in-memory config object
     if (oldConfig.syncWithDatabase) {
       await oldConfig.syncWithDatabase();
     }
-    
+
     // 3. Handle PM2 restart if service name changed
     if (newServiceName && oldServiceName && newServiceName !== oldServiceName) {
       console.log(`PM2 service name changed from "${oldServiceName}" to "${newServiceName}". Restarting service...`);
       const restartCommand = `(pm2 delete "${oldServiceName}" || true) && pm2 start server.js --name "${newServiceName}"`;
-      
+
       exec(restartCommand, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) console.error(`Failed to restart PM2 service: ${error.message}`);
       });
@@ -127,29 +127,29 @@ router.post('/config', isAuthenticated, async (req, res) => {
     return res.status(500).json({ error: 'Failed to save config to database' });
   }
 });
-  
-  router.get('/settings', isAuthenticated, async (req, res) => {
-    try {
-      const settings = await database.getAllSettings();
-      res.json(settings);
-    } catch (error) {
-      console.error('Failed to get settings:', error);
-      res.status(500).json({ error: 'Failed to get settings' });
-    }
-  });
-  
+
+router.get('/settings', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await database.getAllSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Failed to get settings:', error);
+    res.status(500).json({ error: 'Failed to get settings' });
+  }
+});
+
 router.post('/settings', isAuthenticated, async (req, res) => {
-    try {
-      const newSettings = req.body;
-      for (const [key, value] of Object.entries(newSettings)) {
-        await database.setSetting(key, String(value));
-      }
-      res.json({ message: 'Settings updated successfully' });
-    } catch (error) {
-      console.error('Failed to update settings:', error);
-      res.status(500).json({ error: 'Failed to update settings' });
+  try {
+    const newSettings = req.body;
+    for (const [key, value] of Object.entries(newSettings)) {
+      await database.setSetting(key, String(value));
     }
-  });
+    res.json({ message: 'Settings updated successfully' });
+  } catch (error) {
+    console.error('Failed to update settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
 
 router.get('/system/nodes', isAuthenticated, async (req, res) => {
   try {
@@ -194,7 +194,7 @@ router.delete('/system/nodes/:id', isAuthenticated, async (req, res) => {
 router.get('/system/discover', isAuthenticated, async (req, res) => {
   const discovery = require('../../lib/discovery');
   const foundNodes = [];
-  
+
   discovery.scan((node) => {
     if (!foundNodes.some(n => n.url === node.url)) {
       foundNodes.push(node);
@@ -207,62 +207,62 @@ router.get('/system/discover', isAuthenticated, async (req, res) => {
     res.json(foundNodes);
   }, 5000);
 });
-  
+
 router.get('/browse', isAuthenticated, async (req, res) => {
-  
-    const isWindows = process.platform === 'win32';
-    let currentPath = req.query.path;
-    console.log(`Browsing path: ${currentPath}`);
 
-    if (!currentPath) {
-        if (isWindows) {
-            console.log('No path, listing drives (Windows)');
-            try {
-                const drives = await utils.getDrives();
-                return res.json({
-                    currentPath: 'Computer',
-                    parentDir: null,
-                    isRoot: true,
-                    directories: drives
-                });
-            } catch (err) {
-                console.error('Error getting drives:', err);
-                return res.status(500).json({ error: 'Failed to get drives' });
-            }
-        } else {
-            console.log('No path, starting at / (Linux/macOS)');
-            currentPath = '/';
-        }
-    }
+  const isWindows = process.platform === 'win32';
+  let currentPath = req.query.path;
+  console.log(`Browsing path: ${currentPath}`);
 
-    try {
-        console.log(`Reading directory: ${currentPath}`);
-        const files = fs.readdirSync(currentPath, { withFileTypes: true });
-        const directories = files
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => ({
-                name: dirent.name,
-                path: path.join(currentPath, dirent.name)
-            }));
-
-        const parent = path.resolve(currentPath, '..');
-        const isDriveRoot = isWindows && /^[A-Z]:\\?$/.test(currentPath);
-
-        res.json({
-            currentPath,
-            parentDir: isDriveRoot ? '' : parent,
-            isRoot: false,
-            directories
+  if (!currentPath) {
+    if (isWindows) {
+      console.log('No path, listing drives (Windows)');
+      try {
+        const drives = await utils.getDrives();
+        return res.json({
+          currentPath: 'Computer',
+          parentDir: null,
+          isRoot: true,
+          directories: drives
         });
-    } catch (error) {
-        console.error('Error browsing path:', error);
-        if (error.code === 'ENOENT') {
-            console.log('Path not found, redirecting to root');
-            res.redirect(`/api/browse`);
-        } else {
-            res.status(500).json({ error: 'Failed to browse path' });
-        }
+      } catch (err) {
+        console.error('Error getting drives:', err);
+        return res.status(500).json({ error: 'Failed to get drives' });
+      }
+    } else {
+      console.log('No path, starting at / (Linux/macOS)');
+      currentPath = '/';
     }
+  }
+
+  try {
+    console.log(`Reading directory: ${currentPath}`);
+    const files = fs.readdirSync(currentPath, { withFileTypes: true });
+    const directories = files
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => ({
+        name: dirent.name,
+        path: path.join(currentPath, dirent.name)
+      }));
+
+    const parent = path.resolve(currentPath, '..');
+    const isDriveRoot = isWindows && /^[A-Z]:\\?$/.test(currentPath);
+
+    res.json({
+      currentPath,
+      parentDir: isDriveRoot ? '' : parent,
+      isRoot: false,
+      directories
+    });
+  } catch (error) {
+    console.error('Error browsing path:', error);
+    if (error.code === 'ENOENT') {
+      console.log('Path not found, redirecting to root');
+      res.redirect(`/api/browse`);
+    } else {
+      res.status(500).json({ error: 'Failed to browse path' });
+    }
+  }
 });
 
 module.exports = router;
