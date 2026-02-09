@@ -9,9 +9,9 @@ This plan details the steps to replace the deprecated `wmic` command with `syste
 ## Phase 2: Refactor Drive Listing and Enhance API
 - [x] Task: Create a unit test in `test/browse_api.test.js` to verify the `/api/system/browse` endpoint, specifically mocking Windows drive listing. [524119d]
 - [x] Task: Implement a utility function in `lib/utils.js` (or similar) to abstract drive listing using `systeminformation`. [e3db536]
-- [~] Task: Update `routes/api/system.js` to use the new utility for listing drives on Windows.
-- [ ] Task: Enhance the `/api/system/browse` response to include `label`, `totalSpace`, and `availableSpace` for drives.
-- [ ] Task: Verify that all tests pass, including the new unit tests and existing system tests.
+- [x] Task: Update `routes/api/system.js` to use the new utility for listing drives on Windows. [dea8169]
+- [x] Task: Enhance the `/api/system/browse` response to include `label`, `totalSpace`, and `availableSpace` for drives. [dea8169]
+- [~] Task: Verify that all tests pass, including the new unit tests and existing system tests.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ## Phase 3: Final Verification
