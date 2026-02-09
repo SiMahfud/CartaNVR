@@ -1,5 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
+
+// Mock federation-client before requiring healthcheck
+const fedClient = require('../lib/federation-client');
+test.mock.method(fedClient, 'getRemoteHealth', async () => ({ status: 'healthy' }));
+
 const { checkHealth } = require('../lib/healthcheck');
 const database = require('../lib/database');
 

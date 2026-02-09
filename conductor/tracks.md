@@ -1,4 +1,4 @@
-﻿# Project Tracks
+# Project Tracks
 
 This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.
 
@@ -26,3 +26,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Multi-Server Federation**
 *Link: [./tracks/federation_20260208/](./tracks/federation_20260208/)*
+
+---
+
+- [~] **Track: Fix Settings Save and Database Sync**
+*Link: [./tracks/settings_fix_20260209/](./tracks/settings_fix_20260209/)*
