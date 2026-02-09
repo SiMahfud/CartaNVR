@@ -57,7 +57,12 @@ router.get('/playback/:cameraId', isAuthenticatedOrFederated, async (req, res) =
         signal: AbortSignal.timeout(10000)
       });
 
-      if (!response.ok) throw new Error('Remote node error');
+      if (!response.ok) {
+        console.error(`Remote node returned ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`Remote node response: ${errorText}`);
+        throw new Error(`Remote node error: ${response.status} ${response.statusText}`);
+      }
 
       const segments = await response.json();
       // Correct the playback URLs to be absolute
