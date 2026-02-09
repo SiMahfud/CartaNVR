@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const database = require('../../lib/database');
-const { isAuthenticated } = require('../../lib/middleware');
+const { isAuthenticated, isAuthenticatedOrFederated } = require('../../lib/middleware');
 const fedClient = require('../../lib/federation-client');
 
 // Semua rute di sini sudah diawali dengan /api dari server.js, dan /cameras dari api/index.js
 
-// GET /api/cameras
-router.get('/', isAuthenticated, async (req, res) => {
+// GET /api/cameras - accepts both session auth and federation key
+router.get('/', isAuthenticatedOrFederated, async (req, res) => {
   try {
     const localCameras = await database.getAllCameras();
-    
+
     // Fetch remote cameras
     const remoteNodes = await database.getAllRemoteNodes();
     const remoteCamerasPromises = remoteNodes.map(node => fedClient.getRemoteCameras(node));
@@ -44,7 +44,7 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     }
 
     const updatedCamera = await database.updateCamera(cameraId, req.body);
-    
+
     // Dynamic process control
     const recorder = require('../../recorder');
     if (oldCamera.enabled && req.body.enabled === false) {

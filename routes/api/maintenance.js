@@ -6,28 +6,38 @@ const fsp = fs.promises;
 const path = require('path');
 const config = require('../../lib/config');
 const database = require('../../lib/database');
-const { isAuthenticated } = require('../../lib/middleware');
+const { isAuthenticated, isAuthenticatedOrFederated } = require('../../lib/middleware');
+const { checkHealth } = require('../../lib/healthcheck');
 
 // All these routes are prefixed with /api/maintenance
 
-router.post('/reboot', isAuthenticated, (req, res) => {
-    const serviceName = config.pm2_service_name || 'nvr';
-    const command = `pm2 restart "${serviceName}"`;
+// GET /api/maintenance/health - accepts both session auth and federation key
+router.get('/health', isAuthenticatedOrFederated, async (req, res) => {
+    try {
+        const health = await checkHealth();
+        res.json(health);
+    } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(500).json({ status: 'error', error: error.message });
+    }
+});
+const serviceName = config.pm2_service_name || 'nvr';
+const command = `pm2 restart "${serviceName}"`;
 
-    // Respond to the client immediately
-    res.status(200).json({ message: 'Application reboot initiated.' });
+// Respond to the client immediately
+res.status(200).json({ message: 'Application reboot initiated.' });
 
-    // Execute the restart command in the background
-    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error rebooting application: ${error.message}`);
-            // This happens in the background, so we just log it.
-        }
-        if (stderr) {
-            console.warn(`Reboot command stderr: ${stderr}`);
-        }
-        console.log(`Reboot command stdout: ${stdout}`);
-    });
+// Execute the restart command in the background
+exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+    if (error) {
+        console.error(`Error rebooting application: ${error.message}`);
+        // This happens in the background, so we just log it.
+    }
+    if (stderr) {
+        console.warn(`Reboot command stderr: ${stderr}`);
+    }
+    console.log(`Reboot command stdout: ${stdout}`);
+});
 });
 
 router.post('/flush-logs', isAuthenticated, (req, res) => {
@@ -114,7 +124,7 @@ router.post('/delete-all-recordings', isAuthenticated, async (req, res) => {
             const cameraDirs = await fsp.readdir(storage.path);
             for (const camDirName of cameraDirs) {
                 if (!camDirName.startsWith('cam_')) continue;
-                
+
                 const camDirPath = path.join(storage.path, camDirName);
                 try {
                     const stats = await fsp.stat(camDirPath);
@@ -133,7 +143,7 @@ router.post('/delete-all-recordings', isAuthenticated, async (req, res) => {
                         }
                     }
                 } catch (dirErr) {
-                     console.error(`Failed to process directory: ${camDirPath}`, dirErr);
+                    console.error(`Failed to process directory: ${camDirPath}`, dirErr);
                 }
             }
         }
