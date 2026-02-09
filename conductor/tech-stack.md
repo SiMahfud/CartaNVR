@@ -31,4 +31,5 @@
 - **Network Discovery:** `bonjour-service` for mDNS/Bonjour federation discovery.
 - **Cross-Origin:** `cors` for secure inter-node browser communication.
 - **File Monitoring:** `chokidar` untuk memantau perubahan pada direktori rekaman.
+- **System Info:** `systeminformation` for robust hardware and storage discovery.
 - **Process Management:** Mendukung `pm2` (via `start.js`).

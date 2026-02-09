@@ -17,7 +17,7 @@ A simple Network Video Recorder (NVR) application designed to manage IP cameras,
 - **Interactive Setup Wizard:** A user-friendly CLI guide that automates initial database configuration and connection verification.
 - **Individual Camera Control:** Ability to enable or disable specific cameras to manage resources and recording activity.
 - **Multi-format Streaming:** Support for various live streaming formats (DASH, HLS, JSMPEG) to ensure compatibility across different browsers and devices.
-- **Storage Management:** Efficient circular recording that automatically cleans up old footage to prevent disk space exhaustion.
+- **Storage Management:** Efficient circular recording that automatically cleans up old footage to prevent disk space exhaustion, with an enhanced directory browser that provides real-time disk space information.
 - **Configurable Logging:** Granular control over terminal output via the web interface, allowing users to toggle logs for different system components (General, Recorder, Storage).
 
 ## User Interface & Experience
