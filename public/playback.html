@@ -212,7 +212,7 @@
 
       // ===== Helpers =====
       const setLoading = (on) => { els.loading.hidden = !on; };
-      const getFileName = (url) => { try { return new URL(url).pathname.split('/').pop(); } catch { return ''; } };
+      const getFileName = (url) => { try { return new URL(url, document.baseURI).pathname.split('/').pop(); } catch { return ''; } };
       const toLocalISOString = (date) => {
           const tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
           const localISOTime = (new Date(date - tzoffset)).toISOString().slice(0, -1);
@@ -417,7 +417,7 @@
         rafUpdatePlayhead = requestAnimationFrame(() => {
           if (!segments.length || els.player.seeking) { rafUpdatePlayhead = null; return; }
           const currentFile = getFileName(els.player.currentSrc);
-          const seg = segments.find(s => s.file.endsWith(currentFile));
+          const seg = segments.find(s => getFileName(s.file) === currentFile);
           if (!seg) { rafUpdatePlayhead = null; return; }
           const timeFromGlobalStartMs = (seg.timestamp - globalStartTime) + (els.player.currentTime * 1000);
           const x = (timeFromGlobalStartMs / 1000) * pixelsPerSecond;
@@ -449,19 +449,19 @@
       els.player.addEventListener('pause', () => els.playPause.textContent = '▶ Play');
       els.player.addEventListener('ended', () => {
         const name = getFileName(els.player.currentSrc); if (!name) return;
-        const idx = segments.findIndex(s => s.file.endsWith(name));
+        const idx = segments.findIndex(s => getFileName(s.file) === name);
         if (idx > -1 && idx < segments.length - 1) {
           jumpToSegmentIndex(idx + 1, 0);
         }
       });
       els.prev.addEventListener('click', () => {
         const name = getFileName(els.player.currentSrc); if (!name) return;
-        const idx = segments.findIndex(s => s.file.endsWith(name));
+        const idx = segments.findIndex(s => getFileName(s.file) === name);
         if (idx > 0) jumpToSegmentIndex(idx - 1, 0);
       });
       els.next.addEventListener('click', () => {
         const name = getFileName(els.player.currentSrc); if (!name) return;
-        const idx = segments.findIndex(s => s.file.endsWith(name));
+        const idx = segments.findIndex(s => getFileName(s.file) === name);
         if (idx > -1 && idx < segments.length - 1) jumpToSegmentIndex(idx + 1, 0);
       });
       els.speed.addEventListener('change', (e) => { els.player.playbackRate = Number(e.target.value) || 1; });
