@@ -810,22 +810,23 @@
                 const formData = new FormData(settingsForm);
                 const allSettings = {};
                 
-                // Process all form elements
-                for (let [key, value] of formData.entries()) {
-                    const input = settingsForm.elements[key];
+                // Process ALL form elements to ensure unchecked checkboxes are included
+                Array.from(settingsForm.elements).forEach(input => {
+                    if (!input.name) return; // Skip elements without a name attribute
+
                     if (input.type === 'checkbox') {
-                        allSettings[key] = input.checked ? '1' : '0';
+                        allSettings[input.name] = input.checked ? '1' : '0';
                     } else if (input.type === 'number') {
                         // Convert back to original values if needed (e.g. intervals)
-                        if (key === 'CLEANUP_INTERVAL_MS' || key === 'PERIODIC_SYNC_MS') {
-                            allSettings[key] = String(Number(value) * 60 * 1000);
+                        if (input.name === 'CLEANUP_INTERVAL_MS' || input.name === 'PERIODIC_SYNC_MS') {
+                            allSettings[input.name] = String(Number(input.value) * 60 * 1000);
                         } else {
-                            allSettings[key] = String(value);
+                            allSettings[input.name] = String(input.value);
                         }
-                    } else {
-                        allSettings[key] = value;
+                    } else if (input.name) {
+                        allSettings[input.name] = input.value;
                     }
-                }
+                });
 
                 // Explicitly add fields that might not be in FormData (e.g. readonly or custom handled)
                 allSettings.federation_key = document.getElementById('federation_key').value;
