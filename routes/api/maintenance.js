@@ -43,33 +43,40 @@ router.post('/reboot', isAuthenticated, (req, res) => {
 });
 
 router.post('/flush-logs', isAuthenticated, (req, res) => {
-    const command = `pm2 flush "${config.pm2_service_name}"`;
+    // Basic validation to prevent command injection
+    const serviceName = config.pm2_service_name || 'nvr';
+    if (!/^[a-zA-Z0-9_\-\s]+$/.test(serviceName)) {
+        return res.status(400).json({ message: 'Invalid PM2 service name' });
+    }
+
+    const command = `pm2 flush "${serviceName}"`;
 
     exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error flushing logs: ${error.message}`);
             return res.status(500).json({ message: `Failed to flush logs: ${error.message}` });
         }
-        if (stderr) {
-            console.warn(`Flush logs command stderr: ${stderr}`);
-        }
-        console.log(`Flush logs command stdout: ${stdout}`);
         res.status(200).json({ message: 'PM2 logs flushed successfully.' });
     });
 });
 
 router.get('/logs', isAuthenticated, (req, res) => {
-    const lines = req.query.lines || 200;
+    let lines = parseInt(req.query.lines, 10) || 200;
+    if (lines < 0 || lines > 5000) lines = 200; // Cap lines for safety
+
+    const serviceName = config.pm2_service_name || 'nvr';
+    if (!/^[a-zA-Z0-9_\-\s]+$/.test(serviceName)) {
+        return res.status(500).json({ logs: 'Invalid service name configuration' });
+    }
+
     // --nostream is crucial to prevent the command from hanging
-    const command = `pm2 logs "${config.pm2_service_name}" --lines ${lines} --nostream`;
+    const command = `pm2 logs "${serviceName}" --lines ${lines} --nostream`;
 
     exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error fetching logs: ${error.message}`);
-            // Even if the command fails, stderr might have useful info (e.g., "process not found")
             return res.status(500).json({ logs: stderr || '' });
         }
-        // PM2 logs command often outputs to both stdout and stderr, so we combine them.
         res.status(200).json({ logs: stdout + stderr });
     });
 });

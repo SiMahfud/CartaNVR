@@ -67,7 +67,15 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 // DELETE /api/cameras/:id
 router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
-    await database.deleteCamera(req.params.id);
+    const cameraId = req.params.id;
+    // Stop recording first if exists
+    const camera = await database.getCameraById(cameraId);
+    if (camera) {
+      const recorder = require('../../recorder');
+      await recorder.stopRecordingForCamera(cameraId, camera.storage_path);
+    }
+
+    await database.deleteCamera(cameraId);
     res.status(204).send();
   } catch (error) {
     console.error('Delete failed:', error);

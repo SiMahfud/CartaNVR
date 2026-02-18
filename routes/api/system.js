@@ -95,7 +95,17 @@ router.get('/config', isAuthenticated, async (req, res) => {
   if (config.syncWithDatabase) {
     await config.syncWithDatabase();
   }
-  res.json(config);
+
+  // Create a sanitized copy of config
+  const safeConfig = { ...config };
+
+  // Remove sensitive information
+  delete safeConfig.sessionSecret;
+  delete safeConfig.defaultAdminPassword;
+  delete safeConfig.MYSQL_CONFIG;
+  delete safeConfig.dbEvents; // If attached
+
+  res.json(safeConfig);
 });
 
 router.post('/config', isAuthenticated, async (req, res) => {
