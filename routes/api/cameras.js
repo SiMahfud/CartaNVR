@@ -45,14 +45,16 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 
     const updatedCamera = await database.updateCamera(cameraId, req.body);
 
-    // Dynamic process control
+    // Dynamic process control - use explicit boolean coercion
     const recorder = require('../../recorder');
-    if (oldCamera.enabled && req.body.enabled === false) {
+    const wasEnabled = !!oldCamera.enabled;
+    const isNowEnabled = req.body.enabled !== false && req.body.enabled !== 0 && req.body.enabled !== '0' && req.body.enabled !== 'false';
+
+    if (wasEnabled && !isNowEnabled) {
       // Transitioned to Disabled
       await recorder.stopRecordingForCamera(cameraId, oldCamera.storage_path);
-    } else if (!oldCamera.enabled && req.body.enabled === true) {
+    } else if (!wasEnabled && isNowEnabled) {
       // Transitioned to Enabled
-      // We need the full camera object including storage info for starting
       const fullCamera = await database.getCameraById(cameraId);
       recorder.startRecordingForCamera(fullCamera);
     }
@@ -75,6 +77,8 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
       await recorder.stopRecordingForCamera(cameraId, camera.storage_path);
     }
 
+    // Delete associated recordings from DB first
+    await database.deleteRecordingsByCameraId(cameraId);
     await database.deleteCamera(cameraId);
     res.status(204).send();
   } catch (error) {

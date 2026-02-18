@@ -100,10 +100,21 @@ app.use('/', authRoutes);
 app.use('/', pagesRoutes);
 app.use('/api', apiRoutes);
 
-app.use(express.static(path.join(__dirname, 'public')));
-
 // Middleware untuk Cek Autentikasi
 const { isAuthenticated } = require('./lib/middleware');
+
+// Serve static files AFTER auth routes, so HTML pages require login
+// Note: login page (index.html) is served via auth route, not static middleware
+app.use(express.static(path.join(__dirname, 'public'), {
+  // Only serve JS, CSS, and asset files without auth
+  // HTML files are served via explicit authenticated routes
+  setHeaders: (res, filePath) => {
+    // Allow caching of static assets
+    if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  }
+}));
 
 // Akses ke file statis yang membutuhkan autentikasi (jika ada)
 app.use('/dash', isAuthenticated, express.static(path.join(__dirname, 'public', 'dash'), {

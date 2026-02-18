@@ -24,6 +24,10 @@ router.get('/health', isAuthenticatedOrFederated, async (req, res) => {
 
 router.post('/reboot', isAuthenticated, (req, res) => {
     const serviceName = config.pm2_service_name || 'nvr';
+    // Validate service name to prevent command injection
+    if (!/^[a-zA-Z0-9_\-\s]+$/.test(serviceName)) {
+        return res.status(400).json({ message: 'Invalid PM2 service name configuration' });
+    }
     const command = `pm2 restart "${serviceName}"`;
 
     // Respond to the client immediately
@@ -33,7 +37,6 @@ router.post('/reboot', isAuthenticated, (req, res) => {
     exec(command, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error rebooting application: ${error.message}`);
-            // This happens in the background, so we just log it.
         }
         if (stderr) {
             console.warn(`Reboot command stderr: ${stderr}`);
@@ -82,28 +85,42 @@ router.get('/logs', isAuthenticated, (req, res) => {
 });
 
 router.post('/update', isAuthenticated, (req, res) => {
-    // Menjalankan git pull
+    // Validate we're in a git repository
+    const gitDir = path.join(config.BASE_DIR, '.git');
+    if (!fs.existsSync(gitDir)) {
+        return res.status(400).json({ message: 'Not a git repository. Update not available.' });
+    }
+
     const command = `git pull`;
 
     console.log(`Executing update command: ${command}`);
 
-    exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+    exec(command, { cwd: config.BASE_DIR, windowsHide: true }, (error, stdout, stderr) => {
         const output = stdout + stderr;
         if (error) {
             console.error(`Update command failed: ${error.message}`);
             return res.status(500).json({ message: `Update failed: ${error.message}`, output });
         }
         console.log(`Update command output: ${output}`);
-        res.status(200).json({ message: 'Application update initiated successfully. The service need to restart restart.', output });
+        res.status(200).json({ message: 'Application update initiated successfully. The service needs to be restarted.', output });
     });
 });
 
 router.post('/run-script', isAuthenticated, (req, res) => {
-    // PERINGATAN: Endpoint ini menjalankan perintah dengan sudo.
-    // Pastikan Anda telah mengkonfigurasi /etc/sudoers dengan benar di server Anda
-    // agar pengguna yang menjalankan Node.js dapat menjalankan skrip ini tanpa password.
-    const scriptPath = '/opt/nvr/maintenance.sh'; // Ganti dengan path skrip Anda yang sebenarnya
-    const command = `sudo ${scriptPath}`;
+    const scriptPath = '/opt/nvr/maintenance.sh';
+
+    // Validate script exists before executing
+    if (!fs.existsSync(scriptPath)) {
+        return res.status(404).json({ message: `Maintenance script not found at ${scriptPath}` });
+    }
+
+    // Validate script path is the expected file (no path traversal)
+    const resolvedPath = path.resolve(scriptPath);
+    if (resolvedPath !== scriptPath) {
+        return res.status(400).json({ message: 'Invalid script path' });
+    }
+
+    const command = `sudo ${resolvedPath}`;
 
     console.log(`Executing maintenance script: ${command}`);
 

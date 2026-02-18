@@ -119,6 +119,11 @@ router.post('/config', isAuthenticated, async (req, res) => {
     const newSettings = req.body;
     const newServiceName = newSettings.pm2_service_name;
 
+    // Validate PM2 service name to prevent command injection
+    if (newServiceName && !/^[a-zA-Z0-9_\-\s]+$/.test(newServiceName)) {
+      return res.status(400).json({ error: 'Invalid PM2 service name. Only alphanumeric, dash, underscore, and space allowed.' });
+    }
+
     // 1. Save all incoming fields to database
     for (const [key, value] of Object.entries(newSettings)) {
       await database.setSetting(key, String(value));
@@ -131,8 +136,12 @@ router.post('/config', isAuthenticated, async (req, res) => {
 
     // 3. Handle PM2 restart if service name changed
     if (newServiceName && oldServiceName && newServiceName !== oldServiceName) {
+      // Validate old service name too
+      if (!/^[a-zA-Z0-9_\-\s]+$/.test(oldServiceName)) {
+        return res.status(400).json({ error: 'Current PM2 service name is invalid. Please fix it manually.' });
+      }
       console.log(`PM2 service name changed from "${oldServiceName}" to "${newServiceName}". Restarting service...`);
-      const restartCommand = `(pm2 delete "${oldServiceName}" || true) && pm2 start server.js --name "${newServiceName}"`;
+      const restartCommand = `pm2 delete "${oldServiceName}" & pm2 start server.js --name "${newServiceName}"`;
 
       exec(restartCommand, { windowsHide: true }, (error, stdout, stderr) => {
         if (error) console.error(`Failed to restart PM2 service: ${error.message}`);
@@ -215,8 +224,10 @@ router.delete('/system/nodes/:id', isAuthenticated, async (req, res) => {
 router.get('/system/discover', isAuthenticated, async (req, res) => {
   const discovery = require('../../lib/discovery');
   const foundNodes = [];
+  let scanBrowser;
 
-  discovery.scan((node) => {
+  // Use a local callback to avoid race conditions between concurrent requests
+  scanBrowser = discovery.scan((node) => {
     if (!foundNodes.some(n => n.url === node.url)) {
       foundNodes.push(node);
     }

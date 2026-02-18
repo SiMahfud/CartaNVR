@@ -35,7 +35,17 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 
 router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
-    await database.deleteStorage(req.params.id);
+    const storageId = req.params.id;
+
+    // Stop recordings for cameras using this storage before deleting
+    const cameras = await database.getAllCameras();
+    const recorder = require('../../recorder');
+    const camerasInStorage = cameras.filter(c => String(c.storage_id) === String(storageId));
+    for (const cam of camerasInStorage) {
+      await recorder.stopRecordingForCamera(cam.id, cam.storage_path);
+    }
+
+    await database.deleteStorage(storageId);
     res.status(204).send();
   } catch (error) {
     console.error('Delete failed:', error);
