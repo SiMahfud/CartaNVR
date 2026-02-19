@@ -11,7 +11,7 @@ const path = require('path');
 const chokidar = require('chokidar');
 const database = require('./lib/database');
 const logger = require('./lib/logger');
-const { enqueueRemuxJob } = require('./lib/post-processor.js');
+const { enqueueRemuxJob, stopAllPostProcessing } = require('./lib/post-processor.js');
 const { syncExistingFilesOnce, periodicSyncDbToDisk, cleanupStorage } = require('./lib/storage.js');
 const { startFFmpegForCamera, stopAllFFmpeg } = require('./lib/ffmpeg-manager.js');
 
@@ -120,6 +120,9 @@ async function stopAllRecordings() {
 
   // 3. Hentikan semua proses FFmpeg
   await stopAllFFmpeg();
+
+  // 4. Hentikan semua proses Post-Processing
+  stopAllPostProcessing();
 
   logger.log('recorder', '[RECORDER] Semua layanan telah dihentikan.');
 }

@@ -14,15 +14,15 @@ async function checkConfig() {
 
 async function initialize() {
   await checkConfig();
-  
+
   const database = require('./lib/database');
   await database.init();
-  
+
   const config = require('./lib/config');
   if (config.syncWithDatabase) {
     await config.syncWithDatabase();
   }
-  
+
   const logger = require('./lib/logger');
   const recorder = require('./recorder');
 
@@ -44,7 +44,7 @@ async function initialize() {
 
   server.listen(PORT, () => {
     logger.log('general', `Server is running on http://localhost:${PORT}`);
-    
+
     // Start discovery advertisement
     try {
       const discovery = require('./lib/discovery');
@@ -57,5 +57,26 @@ async function initialize() {
     recorder.startAllRecordings();
   });
 }
+
+function gracefulShutdown(signal) {
+  const logger = require('./lib/logger');
+  const recorder = require('./recorder');
+
+  console.log(`\n[SERVER] Received ${signal}. Shutting down gracefully...`);
+  logger.log('general', `[SERVER] Received ${signal}. Shutting down gracefully...`);
+
+  recorder.stopAllRecordings()
+    .then(() => {
+      console.log('[SERVER] All recordings and processes stopped. Exiting.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('[SERVER] Error during shutdown:', err);
+      process.exit(1);
+    });
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 initialize();
