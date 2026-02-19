@@ -109,6 +109,7 @@ async function stopAllRecordings() {
       console.error(`[WATCHER] Gagal menutup watcher untuk ${dir}:`, e.message);
     }
     activeWatchers.delete(dir);
+    lastFilePerDir.delete(dir);
   }
 
   // 2. Hentikan semua tugas periodik
@@ -140,7 +141,7 @@ function startRecordingForCamera(camera) {
 async function stopRecordingForCamera(cameraId, storagePath) {
   const { stopFFmpegForCamera } = require('./lib/ffmpeg-manager.js');
   const { sanitizeCamId } = require('./lib/utils');
-  
+
   // 1. Hentikan FFmpeg
   await stopFFmpegForCamera(cameraId);
 
@@ -153,6 +154,7 @@ async function stopRecordingForCamera(cameraId, storagePath) {
       try {
         await watcher.close();
         activeWatchers.delete(dirPath);
+        lastFilePerDir.delete(dirPath);
         logger.log('recorder', `[WATCHER] Watcher untuk ${dirPath} dihentikan.`);
       } catch (e) {
         console.error(`[WATCHER] Gagal menutup watcher untuk ${dirPath}:`, e.message);

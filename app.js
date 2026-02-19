@@ -32,9 +32,27 @@ function isOriginWhitelisted(origin) {
   } catch { return false; }
 }
 
+// Cache remote node URLs untuk CORS — dihindari query DB per-request
+let cachedNodeUrls = [];
+const dbEmitter = require('./lib/db-events');
+
+// Refresh cache saat startup dan saat ada perubahan di remote_nodes
+async function refreshCorsNodeCache() {
+  try {
+    await database.init();
+    const nodes = await database.getAllRemoteNodes();
+    cachedNodeUrls = nodes.map(n => n.url);
+  } catch { /* DB belum siap, akan di-refresh nanti */ }
+}
+refreshCorsNodeCache();
+
+// Invalidate cache when remote nodes are likely to have changed
+// (triggered by any setting change or can be extended for node changes)
+dbEmitter.on('remoteNodesChanged', () => refreshCorsNodeCache());
+
 // Konfigurasi CORS Dinamis untuk Federation
 const corsOptions = {
-  origin: async (origin, callback) => {
+  origin: (origin, callback) => {
     // Izinkan jika tidak ada origin (seperti permintaan server-to-server atau lokal)
     if (!origin) return callback(null, true);
 
@@ -55,10 +73,8 @@ const corsOptions = {
         return callback(null, true);
       }
 
-      // Periksa apakah origin terdaftar di remote_nodes
-      await database.init();
-      const remoteNodes = await database.getAllRemoteNodes();
-      if (remoteNodes.some(node => origin.startsWith(node.url))) {
+      // Periksa apakah origin terdaftar di cached remote_nodes
+      if (cachedNodeUrls.some(url => origin.startsWith(url))) {
         return callback(null, true);
       }
 
