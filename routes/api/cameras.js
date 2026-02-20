@@ -50,11 +50,23 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     const wasEnabled = !!oldCamera.enabled;
     const isNowEnabled = req.body.enabled !== false && req.body.enabled !== 0 && req.body.enabled !== '0' && req.body.enabled !== 'false';
 
+    // Check for critical changes that require restart
+    const streamMethodChanged = req.body.stream_method && req.body.stream_method !== oldCamera.stream_method;
+    const rtspUrlChanged = req.body.rtsp_url && req.body.rtsp_url !== oldCamera.rtsp_url;
+    const needsRestart = isNowEnabled && (streamMethodChanged || rtspUrlChanged);
+
     if (wasEnabled && !isNowEnabled) {
       // Transitioned to Disabled
       await recorder.stopRecordingForCamera(cameraId, oldCamera.storage_path);
     } else if (!wasEnabled && isNowEnabled) {
       // Transitioned to Enabled
+      const fullCamera = await database.getCameraById(cameraId);
+      recorder.startRecordingForCamera(fullCamera);
+    } else if (wasEnabled && isNowEnabled && needsRestart) {
+      // Still enabled, but critical config changed -> Restart
+      console.log(`[CAMERA] Critical config changed for cam ${cameraId}. Restarting stream...`);
+      await recorder.stopRecordingForCamera(cameraId, oldCamera.storage_path);
+      // Fetch fresh data including new config
       const fullCamera = await database.getCameraById(cameraId);
       recorder.startRecordingForCamera(fullCamera);
     }

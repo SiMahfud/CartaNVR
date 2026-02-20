@@ -30,6 +30,14 @@ async function initialize() {
   // Ensure express-ws is tied to the actual http server for upgrade handling
   require('express-ws')(app, server);
 
+  // Initialize Stream Relay
+  const streamRelay = require('./lib/stream-relay');
+  streamRelay.init();
+
+  // Initialize WebSocket Routes
+  require('./routes/websocket')(app);
+
+
   const PORT = process.env.PORT || 3000;
 
   // Buat user admin default jika belum ada
