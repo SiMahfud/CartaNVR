@@ -141,6 +141,14 @@
             <label for="edit-camera-storage" class="form-label">Storage Location</label>
             <select class="form-select" id="edit-camera-storage"></select>
           </div>
+          <div class="mb-3">
+            <label for="edit-camera-stream-method" class="form-label">Stream Method</label>
+            <select class="form-select" id="edit-camera-stream-method">
+              <option value="dash">DASH (High Latency, Standard)</option>
+              <option value="jsmpeg">JSMpeg (Low Latency, High CPU)</option>
+            </select>
+            <small class="text-muted">Use JSMpeg for real-time monitoring. DASH is better for stable multi-camera view.</small>
+          </div>
           <div class="form-check mb-3">
             <input class="form-check-input" type="checkbox" id="edit-camera-is-hevc">
             <label class="form-check-label" for="edit-camera-is-hevc">
@@ -272,6 +280,9 @@
                 </p>
                 <p class="card-text small mb-0">
                     <strong>Storage:</strong> ${cam.storage_name || '<i>None</i>'}
+                </p>
+                <p class="card-text small mb-0">
+                    <strong>Stream:</strong> <span class="badge ${cam.stream_method === 'jsmpeg' ? 'bg-warning text-dark' : 'bg-secondary'}">${cam.stream_method?.toUpperCase() || 'DASH'}</span>
                 </p>
               </div>
               <div class="card-footer bg-light text-end">
@@ -412,6 +423,7 @@
             document.getElementById('edit-camera-rtsp').value = camera.rtsp_url;
             document.getElementById('edit-camera-is-hevc').checked = camera.is_hevc || false;
             document.getElementById('edit-camera-enabled').checked = camera.enabled !== false;
+            document.getElementById('edit-camera-stream-method').value = camera.stream_method || 'dash';
             storageSelect.value = camera.storage_id || '';
             editModal.show();
           }
@@ -426,11 +438,12 @@
         const storage_id = storageSelect.value ? parseInt(storageSelect.value, 10) : null;
         const is_hevc = document.getElementById('edit-camera-is-hevc').checked;
         const enabled = document.getElementById('edit-camera-enabled').checked;
+        const stream_method = document.getElementById('edit-camera-stream-method').value;
 
         const response = await fetch(`/api/cameras/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, rtsp_url, storage_id, is_hevc, enabled })
+          body: JSON.stringify({ name, rtsp_url, storage_id, is_hevc, enabled, stream_method })
         });
 
         if (response.ok) {

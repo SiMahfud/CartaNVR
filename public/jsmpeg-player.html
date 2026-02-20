@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>JSMpeg Player</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        #status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-family: sans-serif;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 5px;
+            border-radius: 3px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="status">Connecting...</div>
+    <canvas id="video-canvas"></canvas>
+    <script src="jsmpeg.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const camId = urlParams.get('cam');
+        const statusEl = document.getElementById('status');
+        const canvas = document.getElementById('video-canvas');
+
+        if (!camId) {
+            statusEl.textContent = 'No Camera ID';
+        } else {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/stream/${camId}`;
+
+            const player = new JSMpeg.Player(wsUrl, {
+                canvas: canvas,
+                autoplay: true,
+                onPlay: () => {
+                    statusEl.style.display = 'none';
+                },
+                onVideoDecode: (decoder, time) => {
+                    // Send resolution only once when first decoded
+                    if (!this.resolutionSent) {
+                        window.parent.postMessage({
+                            type: 'resolution',
+                            cameraId: camId,
+                            width: canvas.width,
+                            height: canvas.height
+                        }, "*");
+                        this.resolutionSent = true;
+                    }
+                },
+                onStalled: () => {
+                    statusEl.style.display = 'block';
+                    statusEl.textContent = 'Buffering...';
+                },
+                onSourceEstablished: () => {
+                    statusEl.textContent = 'Connected';
+                }
+            });
+            player.resolutionSent = false;
+
+            // Handle Fullscreen request from dashboard
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'requestFullscreen') {
+                    if (canvas.requestFullscreen) canvas.requestFullscreen();
+                    else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
+                    else if (canvas.msRequestFullscreen) canvas.msRequestFullscreen();
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -11,6 +11,9 @@ const passport = require('passport');
 const initializePassport = require('./lib/passport-config');
 
 const app = express();
+const expressWs = require('express-ws')(app);
+const streamRelay = require('./lib/stream-relay');
+streamRelay.init();
 
 // Parse CORS whitelist dari .env (comma-separated, support wildcard *.domain.com)
 const corsWhitelist = (process.env.CORS_WHITELIST || '')
@@ -115,6 +118,13 @@ const apiRoutes = require('./routes/api'); // Main API router
 app.use('/', authRoutes);
 app.use('/', pagesRoutes);
 app.use('/api', apiRoutes);
+
+// JSMpeg WebSocket Stream
+app.ws('/api/stream/:camId', (ws, req) => {
+  const camId = req.params.camId;
+  // Note: auth could be added here if needed via passport session
+  streamRelay.addClient(camId, ws);
+});
 
 // Middleware untuk Cek Autentikasi
 const { isAuthenticated } = require('./lib/middleware');

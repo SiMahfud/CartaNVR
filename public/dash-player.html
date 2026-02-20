@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>DASH Player</title>
     <style>
@@ -8,19 +9,35 @@
             overflow: hidden;
             background-color: #000;
         }
+
         video {
             width: 100%;
             height: 100%;
+            object-fit: contain;
             display: block;
         }
     </style>
     <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
 </head>
+
 <body>
-        <video controls data-dashjs-player autoplay muted></video>
+    <video controls data-dashjs-player autoplay muted></video>
     <script>
         const video = document.querySelector('video');
-        
+
+        video.onloadedmetadata = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const camId = urlParams.get('cam');
+            if (camId) {
+                window.parent.postMessage({
+                    type: 'resolution',
+                    cameraId: camId,
+                    width: video.videoWidth,
+                    height: video.videoHeight
+                }, "*");
+            }
+        };
+
         window.addEventListener('message', (event) => {
             if (event.origin !== window.location.origin) return;
             if (event.data.type === 'requestFullscreen' && video) {
@@ -48,4 +65,5 @@
         });
     </script>
 </body>
+
 </html>

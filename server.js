@@ -27,6 +27,9 @@ async function initialize() {
   const recorder = require('./recorder');
 
   const server = http.createServer(app);
+  // Ensure express-ws is tied to the actual http server for upgrade handling
+  require('express-ws')(app, server);
+
   const PORT = process.env.PORT || 3000;
 
   // Buat user admin default jika belum ada
@@ -64,6 +67,9 @@ function gracefulShutdown(signal) {
 
   console.log(`\n[SERVER] Received ${signal}. Shutting down gracefully...`);
   logger.log('general', `[SERVER] Received ${signal}. Shutting down gracefully...`);
+
+  const streamRelay = require('./lib/stream-relay');
+  streamRelay.close();
 
   recorder.stopAllRecordings()
     .then(() => {
