@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,22 +8,68 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    body { background: #f8f9fa; transition: background 0.3s, color 0.3s; }
-    .card { border-radius: .75rem; }
-    .card-header { font-size: 1rem; }
-    .btn-sm { padding: .25rem .5rem; }
+    body {
+      background: #f8f9fa;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .card {
+      border-radius: .75rem;
+    }
+
+    .card-header {
+      font-size: 1rem;
+    }
+
+    .btn-sm {
+      padding: .25rem .5rem;
+    }
+
     /* Dark mode */
-    body.dark { background: #212529; color: #f8f9fa; }
-    body.dark .card { background: #2c2f33; color: #f8f9fa; }
-    body.dark .card-header { background: #1a1d20 !important; color: #f8f9fa !important; }
-    body.dark .table { color: #f8f9fa; }
-    body.dark .table thead { background: #343a40; color: #f8f9fa; }
-    body.dark .navbar-dark { background: #111 !important; }
-    body.dark .form-control { background-color: #343a40; color: #fff; border-color: #6c757d; }
-    body.dark .modal-content { background-color: #2c2f33; }
-    body.dark .card-footer { background-color: #343a40 !important; }
+    body.dark {
+      background: #212529;
+      color: #f8f9fa;
+    }
+
+    body.dark .card {
+      background: #2c2f33;
+      color: #f8f9fa;
+    }
+
+    body.dark .card-header {
+      background: #1a1d20 !important;
+      color: #f8f9fa !important;
+    }
+
+    body.dark .table {
+      color: #f8f9fa;
+    }
+
+    body.dark .table thead {
+      background: #343a40;
+      color: #f8f9fa;
+    }
+
+    body.dark .navbar-dark {
+      background: #111 !important;
+    }
+
+    body.dark .form-control {
+      background-color: #343a40;
+      color: #fff;
+      border-color: #6c757d;
+    }
+
+    body.dark .modal-content {
+      background-color: #2c2f33;
+    }
+
+    body.dark .card-footer {
+      background-color: #343a40 !important;
+    }
   </style>
 </head>
+
 <body>
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -34,7 +81,8 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link active" aria-current="page" href="/manage-cameras">Camera Manager</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="/manage-cameras">Camera Manager</a>
+          </li>
           <li class="nav-item"><a class="nav-link" href="/playback">Playback</a></li>
           <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
         </ul>
@@ -63,38 +111,50 @@
           </div>
           <div class="card-body">
             <div class="input-group mb-3">
-              <input type="text" id="ip-range-input" class="form-control" placeholder="e.g., 192.168.1.10-20 or 192.168.1.0/24">
+              <input type="text" id="ip-range-input" class="form-control"
+                placeholder="e.g., 192.168.1.10-20 or 192.168.1.0/24">
             </div>
             <div class="row g-2 mb-3">
               <div class="col-md">
                 <div class="form-floating">
-                  <input type="text" class="form-control" id="onvif-user-input" placeholder="Username" value="admin">
-                  <label for="onvif-user-input">Username</label>
+                  <input type="text" class="form-control" id="onvif-user-input" placeholder="Username" value="">
+                  <label for="onvif-user-input">Username (Optional to Scan)</label>
                 </div>
               </div>
               <div class="col-md">
                 <div class="form-floating">
-                  <input type="password" class="form-control" id="onvif-pass-input" placeholder="Password" value="smart999">
+                  <input type="password" class="form-control" id="onvif-pass-input" placeholder="Password" value="">
                   <label for="onvif-pass-input">Password</label>
                 </div>
               </div>
               <div class="col-md-3">
                 <div class="form-floating">
-                  <input type="number" class="form-control" id="onvif-port-input" placeholder="Port" value="80">
-                  <label for="onvif-port-input">Port</label>
+                  <input type="number" class="form-control" id="onvif-port-input" placeholder="Port" value="">
+                  <label for="onvif-port-input">Port (Opt)</label>
                 </div>
               </div>
             </div>
-            <div class="d-grid">
-                <button id="scan-btn" class="btn btn-primary">
-                    <span id="scan-text">Scan</span>
-                    <span id="scan-spinner" class="spinner-border spinner-border-sm ms-2" role="status" style="display:none;"></span>
-                </button>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+              <button id="discover-btn" class="btn btn-secondary me-md-2" type="button">
+                <i class="bi bi-broadcast"></i> <span id="discover-text">Discover Local Cameras</span>
+                <span id="discover-spinner" class="spinner-border spinner-border-sm ms-2" role="status"
+                  style="display:none;"></span>
+              </button>
+              <button id="scan-btn" class="btn btn-primary" type="button">
+                <i class="bi bi-search"></i> <span id="scan-text">Scan IP Range</span>
+                <span id="scan-spinner" class="spinner-border spinner-border-sm ms-2" role="status"
+                  style="display:none;"></span>
+              </button>
             </div>
             <div class="table-responsive" style="max-height: 45vh; overflow-y: auto;">
               <table class="table table-striped table-hover table-sm align-middle">
                 <thead class="table-light">
-                  <tr><th>Name</th><th>IP Address</th><th>RTSP URL</th><th></th></tr>
+                  <tr>
+                    <th>Name</th>
+                    <th>IP Address</th>
+                    <th>RTSP URL</th>
+                    <th></th>
+                  </tr>
                 </thead>
                 <tbody id="scan-results"></tbody>
               </table>
@@ -147,7 +207,8 @@
               <option value="dash">DASH (High Latency, Standard)</option>
               <option value="jsmpeg">JSMpeg (Low Latency, High CPU)</option>
             </select>
-            <small class="text-muted">Use JSMpeg for real-time monitoring. DASH is better for stable multi-camera view.</small>
+            <small class="text-muted">Use JSMpeg for real-time monitoring. DASH is better for stable multi-camera
+              view.</small>
           </div>
           <div class="form-check mb-3">
             <input class="form-check-input" type="checkbox" id="edit-camera-is-hevc">
@@ -176,6 +237,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       const scanBtn = document.getElementById('scan-btn');
       const scanSpinner = document.getElementById('scan-spinner');
+      const discoverBtn = document.getElementById('discover-btn');
+      const discoverSpinner = document.getElementById('discover-spinner');
       const scanResultsBody = document.getElementById('scan-results');
       const savedCamerasGrid = document.getElementById('saved-cameras-grid');
       const editModal = new bootstrap.Modal(document.getElementById('editCameraModal'));
@@ -228,24 +291,24 @@
         setCookie('theme', isDark ? 'dark' : 'light', 365);
         applyTheme();
       });
-      
+
       applyTheme();
       // --- End Dark Mode Logic ---
 
       // Fetch storages
       async function fetchStorages() {
         try {
-            const response = await fetch('/api/storages');
-            storages = await response.json();
-            storageSelect.innerHTML = '<option value="">None</option>';
-            storages.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s.id;
-                option.textContent = s.name;
-                storageSelect.appendChild(option);
-            });
+          const response = await fetch('/api/storages');
+          storages = await response.json();
+          storageSelect.innerHTML = '<option value="">None</option>';
+          storages.forEach(s => {
+            const option = document.createElement('option');
+            option.value = s.id;
+            option.textContent = s.name;
+            storageSelect.appendChild(option);
+          });
         } catch (error) {
-            console.error('Error fetching storages:', error);
+          console.error('Error fetching storages:', error);
         }
       }
 
@@ -255,8 +318,8 @@
         cameras = await response.json();
         savedCamerasGrid.innerHTML = '';
         if (cameras.length === 0) {
-            savedCamerasGrid.innerHTML = '<div class="col-12"><p class="text-center text-muted mt-3">No saved cameras found.</p></div>';
-            return;
+          savedCamerasGrid.innerHTML = '<div class="col-12"><p class="text-center text-muted mt-3">No saved cameras found.</p></div>';
+          return;
         }
         cameras.forEach(cam => {
           const col = document.createElement('div');
@@ -264,7 +327,7 @@
           const hevcBadge = cam.is_hevc ? '<span class="badge bg-info ms-2">HEVC</span>' : '';
           const statusBadge = cam.enabled === false ? '<span class="badge bg-secondary ms-2">Disabled</span>' : '';
           const opacity = cam.enabled === false ? 'style="opacity: 0.7;"' : '';
-          
+
           col.innerHTML = `
             <div class="card h-100" ${opacity}>
               <div class="card-body">
@@ -321,7 +384,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ipRange, port, user, pass })
           });
-          
+
           if (!response.ok) {
             const err = await response.json();
             throw new Error(err.error || 'Scan failed');
@@ -335,30 +398,36 @@
 
           devices.forEach(cam => {
             const row = document.createElement('tr');
-            const cameraName = cam.device.address;
-            const ipAddress = cam.device.address;
-            const rtspUrl = cam.device.profile_list[0]?.stream.rtsp;
-            const username = cam.device.user || '';
-            const password = cam.device.pass || '';
 
-            let fullRtspUrl = rtspUrl;
-            if (username && password && rtspUrl) {
-              const urlParts = rtspUrl.split('://');
-              if (urlParts.length > 1) {
-                fullRtspUrl = `${urlParts[0]}://${username}:${password}@${urlParts[1]}`;
-              }
-            }
-            
+            const cameraName = cam.name || 'Unknown';
+            const ipAddress = cam.ip_address;
+            const targetPort = cam.port || port || 80;
+            const rtspUrl = cam.rtsp_url;
             const isSaved = savedIps.has(ipAddress);
-            const saveButtonHtml = isSaved
-              ? '<button class="btn btn-sm btn-secondary" disabled>Saved</button>'
-              : '<button class="btn btn-sm btn-success save-btn">Save</button>';
+
+            if (isSaved) {
+              row.classList.add('table-secondary');
+            }
+
+            let actionHtml = '';
+            let rtspHtml = '';
+
+            if (isSaved) {
+              actionHtml = '<span class="badge bg-secondary">Saved</span>';
+              rtspHtml = `<input type="text" class="form-control form-control-sm" value="${rtspUrl || ''}" readonly>`;
+            } else if (cam.requires_auth) {
+              actionHtml = `<button class="btn btn-sm btn-outline-primary select-discover-btn" data-ip="${ipAddress}" data-port="${targetPort}">Select</button>`;
+              rtspHtml = `<span class="text-muted small">Requires Auth to get RTSP</span>`;
+            } else {
+              actionHtml = '<button class="btn btn-sm btn-success save-btn">Save</button>';
+              rtspHtml = `<input type="text" class="form-control form-control-sm" value="${rtspUrl || ''}">`;
+            }
 
             row.innerHTML = `
-              <td><input type="text" class="form-control form-control-sm" value="${cameraName}"></td>
-              <td>${ipAddress}</td>
-              <td><input type="text" class="form-control form-control-sm" value="${fullRtspUrl || ''}"></td>
-              <td>${saveButtonHtml}</td>
+              <td><input type="text" class="form-control form-control-sm" value="${cameraName}" ${isSaved || cam.requires_auth ? 'readonly' : ''}></td>
+              <td>${ipAddress} <span class="text-muted small">:${targetPort}</span></td>
+              <td>${rtspHtml}</td>
+              <td>${actionHtml}</td>
             `;
             scanResultsBody.appendChild(row);
           });
@@ -371,13 +440,86 @@
         }
       });
 
-      // Save scanned camera
+      // Discover cameras
+      discoverBtn.addEventListener('click', async () => {
+        discoverBtn.disabled = true;
+        discoverSpinner.style.display = 'inline-block';
+        scanResultsBody.innerHTML = '';
+
+        try {
+          const savedCamerasRes = await fetch('/api/cameras');
+          const savedCameras = await savedCamerasRes.json();
+          const savedIps = new Set(savedCameras.map(cam => cam.ip_address));
+
+          const response = await fetch('/api/discover-cameras');
+          if (!response.ok) {
+            throw new Error('Discovery failed');
+          }
+
+          let devices = await response.json();
+
+          // Mark saved cameras and sort
+          devices = devices.map(cam => ({
+            ...cam,
+            isSaved: savedIps.has(cam.ip)
+          }));
+
+          devices.sort((a, b) => {
+            if (a.isSaved === b.isSaved) return 0;
+            return a.isSaved ? 1 : -1; // Unsaved first
+          });
+
+          if (devices.length === 0) {
+            scanResultsBody.innerHTML = '<tr><td colspan="4" class="text-center">No devices found on the local network.</td></tr>';
+          }
+
+          devices.forEach(cam => {
+            const row = document.createElement('tr');
+            if (cam.isSaved) {
+              row.classList.add('table-secondary');
+            }
+
+            const actionHtml = cam.isSaved
+              ? '<span class="badge bg-secondary">Saved</span>'
+              : `<button class="btn btn-sm btn-outline-primary select-discover-btn" data-ip="${cam.ip}" data-port="${cam.port}">Select</button>`;
+
+            row.innerHTML = `
+              <td>${cam.name}</td>
+              <td>${cam.ip}:${cam.port || 80}</td>
+              <td class="text-muted small">Requires Auth to get RTSP</td>
+              <td>${actionHtml}</td>
+            `;
+            scanResultsBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error('Discovery failed', error);
+          scanResultsBody.innerHTML = '<tr><td colspan="4" class="text-danger">Local discovery failed.</td></tr>';
+        } finally {
+          discoverBtn.disabled = false;
+          discoverSpinner.style.display = 'none';
+        }
+      });
+
+      // Handle table actions
       scanResultsBody.addEventListener('click', async (event) => {
+        if (event.target.classList.contains('select-discover-btn')) {
+          const btn = event.target;
+          const ip = btn.getAttribute('data-ip');
+          const port = btn.getAttribute('data-port') || 80;
+
+          document.getElementById('ip-range-input').value = ip;
+          document.getElementById('onvif-port-input').value = port;
+
+          document.getElementById('onvif-user-input').focus();
+          return;
+        }
+
         if (event.target.classList.contains('save-btn')) {
           const row = event.target.closest('tr');
           const inputs = row.querySelectorAll('input');
           const name = inputs[0].value;
-          const ip_address = row.cells[1].innerText;
+          // Extract just the IP address by splitting by space (before the port span)
+          const ip_address = row.cells[1].innerText.split(' ')[0].trim();
           const rtsp_url = inputs[1].value;
 
           const response = await fetch('/api/cameras', {
@@ -459,4 +601,5 @@
     });
   </script>
 </body>
+
 </html>

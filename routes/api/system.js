@@ -25,6 +25,16 @@ router.post('/scan', isAuthenticated, async (req, res) => {
   }
 });
 
+router.get('/discover-cameras', isAuthenticated, async (req, res) => {
+  try {
+    const devices = await onvifScanner.discover();
+    res.json(devices);
+  } catch (error) {
+    console.error('Discover failed:', error);
+    res.status(500).json({ error: 'Failed to discover devices' });
+  }
+});
+
 router.get('/playback/:cameraId', isAuthenticatedOrFederated, async (req, res) => {
   try {
     const rawId = req.params.cameraId.replace('cam_', '');
