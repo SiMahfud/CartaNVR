@@ -339,18 +339,25 @@
                                 return;
                             }
 
-                            // Detect codec from content-type or default to H.264
-                            const contentType = response.headers.get('content-type') || 'video/mp4; codecs="avc1.640029"';
+                            // Detect codec from content-type.
+                            // e.g., video/mp4; codecs="avc1.640029, mp4a.40.2"
+                            let mimeType = response.headers.get('content-type');
 
-                            let mimeType = 'video/mp4; codecs="avc1.640029"';
-                            if (contentType.includes('codecs')) {
-                                mimeType = contentType;
+                            // Fallback if header is missing or generic
+                            if (!mimeType || !mimeType.includes('codecs')) {
+                                mimeType = 'video/mp4; codecs="avc1.640029, mp4a.40.2"';
                             }
 
                             if (!MediaSource.isTypeSupported(mimeType)) {
-                                console.warn('[go2rtc-player] MSE codec not supported:', mimeType);
-                                resolve(false);
-                                return;
+                                // Fallback to video only if browser complains about the audio codec
+                                const videoOnlyMime = 'video/mp4; codecs="avc1.640029"';
+                                if (MediaSource.isTypeSupported(videoOnlyMime)) {
+                                    mimeType = videoOnlyMime;
+                                } else {
+                                    console.warn('[go2rtc-player] MSE codec not supported:', mimeType);
+                                    resolve(false);
+                                    return;
+                                }
                             }
 
                             const sb = ms.addSourceBuffer(mimeType);
