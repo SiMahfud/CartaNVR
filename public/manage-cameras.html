@@ -327,13 +327,23 @@
           col.classList.add('col');
           const hevcBadge = cam.is_hevc ? '<span class="badge bg-info ms-2">HEVC</span>' : '';
           const statusBadge = cam.enabled === false ? '<span class="badge bg-secondary ms-2">Disabled</span>' : '';
+          const remoteBadge = cam.isRemote ? `<span class="badge bg-primary ms-2">${cam.nodeLabel}</span>` : '';
           const opacity = cam.enabled === false ? 'style="opacity: 0.7;"' : '';
+
+          const footerHtml = cam.isRemote
+            ? `<div class="card-footer bg-light text-center">
+                 <small class="text-muted"><i class="bi bi-cloud me-1"></i>Managed by ${cam.nodeLabel}</small>
+               </div>`
+            : `<div class="card-footer bg-light text-end">
+                 <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${cam.id}"><i class="bi bi-pencil-square"></i> Edit</button>
+                 <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${cam.id}"><i class="bi bi-trash"></i> Delete</button>
+               </div>`;
 
           col.innerHTML = `
             <div class="card h-100" ${opacity}>
               <div class="card-body">
                 <div class="d-flex justify-content-between">
-                    <h6 class="card-title fw-bold">${cam.name}${hevcBadge}${statusBadge}</h6>
+                    <h6 class="card-title fw-bold">${cam.name}${hevcBadge}${statusBadge}${remoteBadge}</h6>
                     <small class="text-muted">ID: ${cam.id}</small>
                 </div>
                 <p class="card-text small mb-1">
@@ -349,10 +359,7 @@
                     <strong>Stream:</strong> <span class="badge ${cam.stream_method === 'go2rtc' ? 'bg-success' : cam.stream_method === 'jsmpeg' ? 'bg-warning text-dark' : 'bg-secondary'}">${cam.stream_method?.toUpperCase() || 'DASH'}</span>
                 </p>
               </div>
-              <div class="card-footer bg-light text-end">
-                <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${cam.id}"><i class="bi bi-pencil-square"></i> Edit</button>
-                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${cam.id}"><i class="bi bi-trash"></i> Delete</button>
-              </div>
+              ${footerHtml}
             </div>
           `;
           savedCamerasGrid.appendChild(col);
