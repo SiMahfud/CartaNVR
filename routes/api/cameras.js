@@ -60,7 +60,8 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     // Check for critical changes that require restart
     const streamMethodChanged = req.body.stream_method && req.body.stream_method !== oldCamera.stream_method;
     const rtspUrlChanged = req.body.rtsp_url && req.body.rtsp_url !== oldCamera.rtsp_url;
-    const needsRestart = isNowEnabled && (streamMethodChanged || rtspUrlChanged);
+    const audioSettingChanged = 'has_audio' in req.body && !!req.body.has_audio !== !!oldCamera.has_audio;
+    const needsRestart = isNowEnabled && (streamMethodChanged || rtspUrlChanged || audioSettingChanged);
 
     if (wasEnabled && !isNowEnabled) {
       // Transitioned to Disabled
