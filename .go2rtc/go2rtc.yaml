@@ -12,3 +12,5 @@ webrtc:
 
 log:
   level: "info"
+streams:
+  cam_1: rtsp://admin:smart999@192.168.21.0:554/Streaming/Channels/101?transportmode=unicast&profile=Profile_1
