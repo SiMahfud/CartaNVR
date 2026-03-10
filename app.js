@@ -128,12 +128,12 @@ const { isAuthenticated } = require('./lib/middleware');
 // Serve static files AFTER auth routes, so HTML pages require login
 // Note: login page (index.html) is served via auth route, not static middleware
 app.use(express.static(path.join(__dirname, 'public'), {
-  // Only serve JS, CSS, and asset files without auth
-  // HTML files are served via explicit authenticated routes
   setHeaders: (res, filePath) => {
-    // Allow caching of static assets
-    if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
-      res.setHeader('Cache-Control', 'public, max-age=3600');
+    // Paksa agar HTML pemutar script (seperti go2rtc-player.html) selalu ambil terbaru
+    if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     }
   }
 }));

@@ -2,6 +2,8 @@ const http = require('http');
 const app = require('./app');
 const setupWizard = require('./lib/setup-wizard');
 
+let httpServer = null;
+
 async function checkConfig() {
   if (!process.env.DB_TYPE) {
     const config = await setupWizard.runWizard();
@@ -25,6 +27,7 @@ async function initialize() {
 
   const logger = require('./lib/logger');
   const recorder = require('./recorder');
+  const go2rtcManager = require('./lib/go2rtc-manager');
 
   const server = http.createServer(app);
   // Ensure express-ws is tied to the actual http server for upgrade handling
@@ -37,6 +40,21 @@ async function initialize() {
   // Initialize WebSocket Routes
   require('./routes/websocket')(app);
 
+  // Initialize go2rtc streaming proxy
+  if (config.GO2RTC_ENABLED) {
+    try {
+      await go2rtcManager.start();
+      // Register all enabled cameras that use go2rtc
+      const cameras = await database.getAllCameras();
+      for (const cam of cameras) {
+        if (cam.enabled !== false && cam.stream_method === 'go2rtc' && cam.rtsp_url) {
+          await go2rtcManager.addStream(cam.id, cam.rtsp_url);
+        }
+      }
+    } catch (err) {
+      logger.log('general', `[GO2RTC] Failed to initialize: ${err.message}`);
+    }
+  }
 
   const PORT = process.env.PORT || 3000;
 
@@ -53,8 +71,22 @@ async function initialize() {
     console.error('Error creating default admin:', err);
   }
 
+  httpServer = server;
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[SERVER] Port ${PORT} is already in use. Retrying in 1s...`);
+      setTimeout(() => {
+        server.close();
+        server.listen(PORT);
+      }, 1000);
+    } else {
+      console.error(`[SERVER] Server error:`, err);
+    }
+  });
+
   server.listen(PORT, () => {
-    logger.log('general', `Server is running on http://localhost:${PORT}`);
+    logger.log('general', `Server is running on http://127.0.0.1:${PORT}`);
 
     // Start discovery advertisement
     try {
@@ -72,6 +104,7 @@ async function initialize() {
 function gracefulShutdown(signal) {
   const logger = require('./lib/logger');
   const recorder = require('./recorder');
+  const go2rtcManager = require('./lib/go2rtc-manager');
 
   console.log(`\n[SERVER] Received ${signal}. Shutting down gracefully...`);
   logger.log('general', `[SERVER] Received ${signal}. Shutting down gracefully...`);
@@ -79,7 +112,17 @@ function gracefulShutdown(signal) {
   const streamRelay = require('./lib/stream-relay');
   streamRelay.close();
 
-  recorder.stopAllRecordings()
+  Promise.all([
+    new Promise(resolve => {
+      if (httpServer) {
+        httpServer.close(resolve);
+      } else {
+        resolve();
+      }
+    }),
+    recorder.stopAllRecordings(),
+    go2rtcManager.stop(),
+  ])
     .then(() => {
       console.log('[SERVER] All recordings and processes stopped. Exiting.');
       process.exit(0);

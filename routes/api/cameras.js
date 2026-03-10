@@ -3,6 +3,7 @@ const router = express.Router();
 const database = require('../../lib/database');
 const { isAuthenticated, isAuthenticatedOrFederated } = require('../../lib/middleware');
 const fedClient = require('../../lib/federation-client');
+const go2rtcManager = require('../../lib/go2rtc-manager');
 
 // Semua rute di sini sudah diawali dengan /api dari server.js, dan /cameras dari api/index.js
 
@@ -28,6 +29,12 @@ router.get('/', isAuthenticatedOrFederated, async (req, res) => {
 router.post('/', isAuthenticated, async (req, res) => {
   try {
     const newCamera = await database.addCamera(req.body);
+
+    // Register with go2rtc if applicable
+    if (newCamera && req.body.stream_method === 'go2rtc' && req.body.rtsp_url && req.body.enabled !== false) {
+      await go2rtcManager.addStream(newCamera.id, req.body.rtsp_url).catch(() => { });
+    }
+
     res.status(201).json(newCamera);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add camera' });
@@ -70,6 +77,20 @@ router.put('/:id', isAuthenticated, async (req, res) => {
       const fullCamera = await database.getCameraById(cameraId);
       recorder.startRecordingForCamera(fullCamera);
     }
+    // Sync go2rtc streams
+    const oldUsedGo2rtc = oldCamera.stream_method === 'go2rtc' && wasEnabled;
+    const newUsesGo2rtc = (req.body.stream_method || oldCamera.stream_method) === 'go2rtc' && isNowEnabled;
+
+    if (oldUsedGo2rtc && !newUsesGo2rtc) {
+      // Was go2rtc, no longer → remove stream
+      await go2rtcManager.removeStream(cameraId).catch(() => { });
+    } else if (newUsesGo2rtc && (rtspUrlChanged || streamMethodChanged || (!wasEnabled && isNowEnabled))) {
+      // Now uses go2rtc and something changed → add/update stream
+      const freshCam = await database.getCameraById(cameraId);
+      if (freshCam && freshCam.rtsp_url) {
+        await go2rtcManager.addStream(cameraId, freshCam.rtsp_url).catch(() => { });
+      }
+    }
 
     res.json(updatedCamera);
   } catch (error) {
@@ -87,6 +108,11 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
     if (camera) {
       const recorder = require('../../recorder');
       await recorder.stopRecordingForCamera(cameraId, camera.storage_path);
+
+      // Remove from go2rtc if applicable
+      if (camera.stream_method === 'go2rtc') {
+        await go2rtcManager.removeStream(cameraId).catch(() => { });
+      }
     }
 
     // Delete associated recordings from DB first

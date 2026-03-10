@@ -6,12 +6,14 @@ const storagesRouter = require('./storages');
 const maintenanceRouter = require('./maintenance');
 const systemRouter = require('./system'); // Contains /scan, /config, etc.
 const recordingsRouter = require('./recordings');
+const go2rtcRouter = require('./go2rtc');
 
 // Resource-specific routes
 router.use('/cameras', camerasRouter);
 router.use('/storages', storagesRouter);
 router.use('/maintenance', maintenanceRouter);
 router.use('/recordings', recordingsRouter);
+router.use('/go2rtc', go2rtcRouter);
 
 // Other general API routes
 router.use('/', systemRouter);

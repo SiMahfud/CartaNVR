@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>go2rtc Player</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        #status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 3px 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #method-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            font-size: 10px;
+            background: rgba(25, 135, 84, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="status">Connecting...</div>
+    <div id="method-badge"></div>
+    <video id="video" autoplay muted playsinline></video>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const camId = urlParams.get('cam');
+        const statusEl = document.getElementById('status');
+        const methodBadge = document.getElementById('method-badge');
+        const video = document.getElementById('video');
+        const streamSrc = `cam_${camId}`;
+
+        let resolutionSent = false;
+
+        function setStatus(text) {
+            statusEl.textContent = text;
+            statusEl.style.display = text ? 'block' : 'none';
+        }
+
+        function setMethod(text) {
+            methodBadge.textContent = text;
+        }
+
+        function reportResolution() {
+            if (!resolutionSent && video.videoWidth && video.videoHeight) {
+                window.parent.postMessage({
+                    type: 'resolution',
+                    cameraId: camId,
+                    width: video.videoWidth,
+                    height: video.videoHeight
+                }, "*");
+                resolutionSent = true;
+            }
+        }
+
+        video.onloadedmetadata = reportResolution;
+        video.onplaying = () => {
+            setStatus('');
+            reportResolution();
+        };
+
+        // Handle fullscreen request from dashboard
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'requestFullscreen') {
+                if (video.requestFullscreen) video.requestFullscreen();
+                else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                else if (video.msRequestFullscreen) video.msRequestFullscreen();
+            }
+        });
+
+        let activePeerConnection = null;
+
+        if (!camId) {
+            setStatus('No Camera ID');
+        } else {
+            startStreaming();
+        }
+
+        /**
+         * Auto-fallback chain: WebRTC → MSE → HLS
+         */
+        async function startStreaming() {
+            setStatus('Trying WebRTC...');
+            setMethod('WebRTC');
+            const webrtcOk = await tryWebRTC();
+            if (webrtcOk) {
+                setMethod('WebRTC');
+                return;
+            }
+
+            // Clean up any leftover WebRTC connection
+            if (activePeerConnection) {
+                try { activePeerConnection.close(); } catch (e) { }
+                activePeerConnection = null;
+            }
+            video.srcObject = null;
+
+            setStatus('Trying MSE...');
+            setMethod('MSE');
+            const mseOk = await tryMSE();
+            if (mseOk) {
+                setMethod('MSE');
+                return;
+            }
+
+            setStatus('Trying HLS...');
+            setMethod('HLS');
+            const hlsOk = await tryHLS();
+            if (hlsOk) {
+                setMethod('HLS');
+                return;
+            }
+
+            setStatus('All streaming methods failed');
+            setMethod('');
+        }
+
+        /**
+         * WebRTC connection via go2rtc API
+         */
+        async function tryWebRTC() {
+            try {
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+                activePeerConnection = pc;
+
+                pc.addTransceiver('video', { direction: 'recvonly' });
+                pc.addTransceiver('audio', { direction: 'recvonly' });
+
+                pc.ontrack = (event) => {
+                    if (event.streams && event.streams[0]) {
+                        video.srcObject = event.streams[0];
+                        // Try to play immediately when we receive a track
+                        video.play().catch(() => { });
+                    }
+                };
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                // Wait for ICE gathering to complete or timeout
+                await new Promise((resolve) => {
+                    if (pc.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        const timeout = setTimeout(resolve, 1500);
+                        pc.onicegatheringstatechange = () => {
+                            if (pc.iceGatheringState === 'complete') {
+                                clearTimeout(timeout);
+                                resolve();
+                            }
+                        };
+                    }
+                });
+
+                const response = await fetch(`/api/go2rtc/webrtc?src=${encodeURIComponent(streamSrc)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/sdp' },
+                    body: pc.localDescription.sdp,
+                });
+
+                if (!response.ok) {
+                    pc.close();
+                    activePeerConnection = null;
+                    return false;
+                }
+
+                const answerSdp = await response.text();
+                await pc.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answerSdp,
+                }));
+
+                // Wait for connection or failure (max 5s)
+                const connected = await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        console.warn('[go2rtc-player] WebRTC connection timeout');
+                        resolve(false);
+                    }, 5000);
+
+                    pc.onconnectionstatechange = () => {
+                        console.log('[go2rtc-player] WebRTC state:', pc.connectionState);
+                        if (pc.connectionState === 'connected') {
+                            clearTimeout(timeout);
+                            resolve(true);
+                        } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+                            clearTimeout(timeout);
+                            resolve(false);
+                        }
+                    };
+                });
+
+                if (!connected) {
+                    pc.close();
+                    activePeerConnection = null;
+                    return false;
+                }
+
+                // WebRTC connected! Now wait for video to actually start playing (max 5s)
+                setStatus('WebRTC connected, waiting for video...');
+                const videoPlaying = await new Promise((resolve) => {
+                    // Check if already playing
+                    if (video.videoWidth > 0 && !video.paused) {
+                        resolve(true);
+                        return;
+                    }
+
+                    const playTimeout = setTimeout(() => {
+                        console.warn('[go2rtc-player] WebRTC video playback timeout - no video frames received');
+                        resolve(false);
+                    }, 5000);
+
+                    const onPlaying = () => {
+                        clearTimeout(playTimeout);
+                        video.removeEventListener('playing', onPlaying);
+                        resolve(true);
+                    };
+                    video.addEventListener('playing', onPlaying);
+
+                    // Also listen for loadeddata as an indicator that frames are arriving
+                    const onLoadedData = () => {
+                        video.play().catch(() => { });
+                        video.removeEventListener('loadeddata', onLoadedData);
+                    };
+                    video.addEventListener('loadeddata', onLoadedData);
+
+                    // Try to play again
+                    video.play().catch(() => { });
+                });
+
+                if (!videoPlaying) {
+                    console.warn('[go2rtc-player] WebRTC connected but video not playing, falling back...');
+                    pc.close();
+                    activePeerConnection = null;
+                    video.srcObject = null;
+                    return false;
+                }
+
+                return true;
+            } catch (err) {
+                console.warn('[go2rtc-player] WebRTC failed:', err.message);
+                if (activePeerConnection) {
+                    try { activePeerConnection.close(); } catch (e) { }
+                    activePeerConnection = null;
+                }
+                return false;
+            }
+        }
+
+        async function tryMSE() {
+            try {
+                if (!window.MediaSource) {
+                    console.warn('[go2rtc-player] MSE not supported in this browser');
+                    return false;
+                }
+
+                const ms = new MediaSource();
+                video.src = URL.createObjectURL(ms);
+
+                return new Promise((resolve) => {
+                    const timeout = setTimeout(() => resolve(false), 10000);
+
+                    ms.addEventListener('sourceopen', async () => {
+                        try {
+                            const url = `/api/go2rtc/stream.mp4?src=${encodeURIComponent(streamSrc)}&_t=${Date.now()}`;
+                            const response = await fetch(url);
+
+                            if (!response.ok || !response.body) {
+                                resolve(false);
+                                return;
+                            }
+
+                            // Detect codec from content-type or default to H.264
+                            const contentType = response.headers.get('content-type') || 'video/mp4; codecs="avc1.640029"';
+
+                            let mimeType = 'video/mp4; codecs="avc1.640029"';
+                            if (contentType.includes('codecs')) {
+                                mimeType = contentType;
+                            }
+
+                            if (!MediaSource.isTypeSupported(mimeType)) {
+                                console.warn('[go2rtc-player] MSE codec not supported:', mimeType);
+                                resolve(false);
+                                return;
+                            }
+
+                            const sb = ms.addSourceBuffer(mimeType);
+                            const reader = response.body.getReader();
+                            let firstChunk = true;
+
+                            // Helper: wait for SourceBuffer to finish updating
+                            const waitForUpdateEnd = () => {
+                                return new Promise(r => {
+                                    if (!sb.updating) {
+                                        r();
+                                    } else {
+                                        sb.addEventListener('updateend', r, { once: true });
+                                    }
+                                });
+                            };
+
+                            const pump = async () => {
+                                try {
+                                    while (true) {
+                                        const { done, value } = await reader.read();
+                                        if (done) return;
+
+                                        // Always wait for any pending update to finish first
+                                        await waitForUpdateEnd();
+
+                                        sb.appendBuffer(value);
+
+                                        // Wait for THIS appendBuffer to complete
+                                        await waitForUpdateEnd();
+
+                                        if (firstChunk) {
+                                            firstChunk = false;
+                                            clearTimeout(timeout);
+                                            resolve(true);
+                                        }
+
+                                        // Auto-play when data is available
+                                        if (video.paused) video.play().catch(() => { });
+
+                                        // Keep buffer small to minimize latency
+                                        if (video.buffered.length > 0) {
+                                            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                                            if (bufferedEnd - video.currentTime > 4) {
+                                                video.currentTime = bufferedEnd - 1;
+                                            }
+                                        }
+                                    }
+                                } catch (err) {
+                                    console.warn('[go2rtc-player] MSE pump error:', err.message);
+                                }
+                            };
+
+                            pump();
+                        } catch (err) {
+                            console.warn('[go2rtc-player] MSE source open error:', err.message);
+                            resolve(false);
+                        }
+                    });
+                });
+            } catch (err) {
+                console.warn('[go2rtc-player] MSE failed:', err.message);
+                return false;
+            }
+        }
+
+        /**
+         * HLS fallback via go2rtc API
+         */
+        async function tryHLS() {
+            try {
+                const url = `/api/go2rtc/stream.m3u8?src=${encodeURIComponent(streamSrc)}`;
+
+                // Check if native HLS is supported (Safari, iOS)
+                if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
+                    return new Promise((resolve) => {
+                        const timeout = setTimeout(() => resolve(false), 10000);
+                        video.onloadeddata = () => {
+                            clearTimeout(timeout);
+                            video.play().catch(() => { });
+                            resolve(true);
+                        };
+                        video.onerror = () => {
+                            clearTimeout(timeout);
+                            resolve(false);
+                        };
+                    });
+                }
+
+                // For browsers without native HLS, try using hls.js if available
+                // For now, just return false as HLS is mainly for Safari/iOS fallback
+                console.warn('[go2rtc-player] Native HLS not supported in this browser');
+                return false;
+            } catch (err) {
+                console.warn('[go2rtc-player] HLS failed:', err.message);
+                return false;
+            }
+        }
+    </script>
+</body>
+
+</html>

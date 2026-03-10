@@ -206,9 +206,10 @@
             <select class="form-select" id="edit-camera-stream-method">
               <option value="dash">DASH (High Latency, Standard)</option>
               <option value="jsmpeg">JSMpeg (Low Latency, High CPU)</option>
+              <option value="go2rtc">go2rtc (Best Quality, Auto-Fallback)</option>
             </select>
-            <small class="text-muted">Use JSMpeg for real-time monitoring. DASH is better for stable multi-camera
-              view.</small>
+            <small class="text-muted">go2rtc provides WebRTC/MSE/HLS with auto-fallback. Best for quality and low CPU.
+            </small>
           </div>
           <div class="form-check mb-3">
             <input class="form-check-input" type="checkbox" id="edit-camera-is-hevc">
@@ -345,7 +346,7 @@
                     <strong>Storage:</strong> ${cam.storage_name || '<i>None</i>'}
                 </p>
                 <p class="card-text small mb-0">
-                    <strong>Stream:</strong> <span class="badge ${cam.stream_method === 'jsmpeg' ? 'bg-warning text-dark' : 'bg-secondary'}">${cam.stream_method?.toUpperCase() || 'DASH'}</span>
+                    <strong>Stream:</strong> <span class="badge ${cam.stream_method === 'go2rtc' ? 'bg-success' : cam.stream_method === 'jsmpeg' ? 'bg-warning text-dark' : 'bg-secondary'}">${cam.stream_method?.toUpperCase() || 'DASH'}</span>
                 </p>
               </div>
               <div class="card-footer bg-light text-end">

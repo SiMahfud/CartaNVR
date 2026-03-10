@@ -371,11 +371,15 @@
                 if (camera.isRemote && camera.nodeUrl) {
                     // We need to strip the prefix 'remote_...' to get the original ID for the remote server
                     const originalId = String(camera.id).split('_').pop();
-                    const playerPage = camera.stream_method === 'jsmpeg' ? 'jsmpeg-player.html' : 'dash-player.html';
-                    iframe.src = `${camera.nodeUrl}/${playerPage}?cam=${originalId}`;
+                    const playerCacheBuster = `v=${Date.now()}`;
+                    const playerPage = camera.stream_method === 'go2rtc' ? `go2rtc-player.html?${playerCacheBuster}&` :
+                        camera.stream_method === 'jsmpeg' ? `jsmpeg-player.html?${playerCacheBuster}&` : `dash-player.html?${playerCacheBuster}&`;
+                    iframe.src = `${camera.nodeUrl}/${playerPage}cam=${originalId}`;
                 } else {
-                    const playerPage = camera.stream_method === 'jsmpeg' ? 'jsmpeg-player.html' : 'dash-player.html';
-                    iframe.src = `${playerPage}?cam=${cameraId}`;
+                    const playerCacheBuster = `v=${Date.now()}`;
+                    const playerPage = camera.stream_method === 'go2rtc' ? `go2rtc-player.html?${playerCacheBuster}&` :
+                        camera.stream_method === 'jsmpeg' ? `jsmpeg-player.html?${playerCacheBuster}&` : `dash-player.html?${playerCacheBuster}&`;
+                    iframe.src = `${playerPage}cam=${cameraId}`;
                 }
 
                 iframe.allow = "fullscreen";
