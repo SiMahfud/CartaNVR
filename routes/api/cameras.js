@@ -32,7 +32,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 
     // Register with go2rtc if applicable
     if (newCamera && req.body.stream_method === 'go2rtc' && req.body.rtsp_url && req.body.enabled !== false) {
-      await go2rtcManager.addStream(newCamera.id, req.body.rtsp_url).catch(() => { });
+      await go2rtcManager.addStream(newCamera.id, req.body.rtsp_url, req.body.has_audio).catch(() => { });
     }
 
     res.status(201).json(newCamera);
@@ -85,11 +85,11 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     if (oldUsedGo2rtc && !newUsesGo2rtc) {
       // Was go2rtc, no longer → remove stream
       await go2rtcManager.removeStream(cameraId).catch(() => { });
-    } else if (newUsesGo2rtc && (rtspUrlChanged || streamMethodChanged || (!wasEnabled && isNowEnabled))) {
+    } else if (newUsesGo2rtc && (rtspUrlChanged || streamMethodChanged || audioSettingChanged || (!wasEnabled && isNowEnabled))) {
       // Now uses go2rtc and something changed → add/update stream
       const freshCam = await database.getCameraById(cameraId);
       if (freshCam && freshCam.rtsp_url) {
-        await go2rtcManager.addStream(cameraId, freshCam.rtsp_url).catch(() => { });
+        await go2rtcManager.addStream(cameraId, freshCam.rtsp_url, freshCam.has_audio).catch(() => { });
       }
     }
 

@@ -48,7 +48,7 @@ async function initialize() {
       const cameras = await database.getAllCameras();
       for (const cam of cameras) {
         if (cam.enabled !== false && cam.stream_method === 'go2rtc' && cam.rtsp_url) {
-          await go2rtcManager.addStream(cam.id, cam.rtsp_url);
+          await go2rtcManager.addStream(cam.id, cam.rtsp_url, cam.has_audio);
         }
       }
 
@@ -68,7 +68,7 @@ async function initialize() {
               const streamName = `cam_${cam.id}`;
               if (!registered[streamName]) {
                 logger.log('general', `[GO2RTC-SYNC] Re-registering missing stream: ${streamName}`);
-                await go2rtcManager.addStream(cam.id, cam.rtsp_url).catch(() => { });
+                await go2rtcManager.addStream(cam.id, cam.rtsp_url, cam.has_audio).catch(() => { });
               }
             }
           }
