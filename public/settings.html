@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,57 +8,139 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background: #f8f9fa; transition: background 0.3s, color 0.3s; }
-        .card { border-radius: .75rem; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .card-header { font-size: 1.2rem; font-weight: bold; }
-        .nav-pills .nav-link { color: #495057; }
-        .nav-pills .nav-link.active { background-color: #0d6efd; }
-        .form-label { font-weight: 500; }
+        body {
+            background: #f8f9fa;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .card {
+            border-radius: .75rem;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .nav-pills .nav-link {
+            color: #495057;
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+        }
+
+        .form-label {
+            font-weight: 500;
+        }
 
         /* Dark mode */
-        body.dark { background: #212529; color: #f8f9fa; }
-        body.dark .card { background: #2c2f33; }
-        body.dark .card-header { background: #343a40; border-bottom: 1px solid #495057; }
-        body.dark .card-footer { background: #343a40; border-top: 1px solid #495057; }
-        body.dark .form-control { background-color: #343a40; color: #fff; border-color: #6c757d; }
-        body.dark .form-control:focus { background-color: #343a40; color: #fff; border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
-        body.dark .form-text { color: #adb5bd; }
-        body.dark .text-muted { color: #adb5bd !important; }
-        body.dark .modal-content { background-color: #2c2f33; }
-        body.dark .list-group-item { background-color: #2c2f33; border-color: #495057; color: #f8f9fa; }
-        body.dark .list-group-item:hover { background-color: #3a3f44; }
-        body.dark .btn-outline-secondary { color: #f8f9fa; border-color: #6c757d; }
-        body.dark .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
-        body.dark .nav-pills .nav-link { color: #ced4da; }
-        body.dark .nav-pills .nav-link.active { background-color: #0d6efd; }
-        body.dark .form-check-input:not(:checked) { background-color: #495057; border-color: #6c757d; }
+        body.dark {
+            background: #212529;
+            color: #f8f9fa;
+        }
+
+        body.dark .card {
+            background: #2c2f33;
+        }
+
+        body.dark .card-header {
+            background: #343a40;
+            border-bottom: 1px solid #495057;
+        }
+
+        body.dark .card-footer {
+            background: #343a40;
+            border-top: 1px solid #495057;
+        }
+
+        body.dark .form-control {
+            background-color: #343a40;
+            color: #fff;
+            border-color: #6c757d;
+        }
+
+        body.dark .form-control:focus {
+            background-color: #343a40;
+            color: #fff;
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        body.dark .form-text {
+            color: #adb5bd;
+        }
+
+        body.dark .text-muted {
+            color: #adb5bd !important;
+        }
+
+        body.dark .modal-content {
+            background-color: #2c2f33;
+        }
+
+        body.dark .list-group-item {
+            background-color: #2c2f33;
+            border-color: #495057;
+            color: #f8f9fa;
+        }
+
+        body.dark .list-group-item:hover {
+            background-color: #3a3f44;
+        }
+
+        body.dark .btn-outline-secondary {
+            color: #f8f9fa;
+            border-color: #6c757d;
+        }
+
+        body.dark .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        body.dark .nav-pills .nav-link {
+            color: #ced4da;
+        }
+
+        body.dark .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+        }
+
+        body.dark .form-check-input:not(:checked) {
+            background-color: #495057;
+            border-color: #6c757d;
+        }
     </style>
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-          <a class="navbar-brand fw-bold" href="/">📹 NVR</a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-              <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
-              <li class="nav-item"><a class="nav-link" href="/manage-cameras">Camera Manager</a></li>
-              <li class="nav-item"><a class="nav-link" href="/playback">Playback</a></li>
-              <li class="nav-item"><a class="nav-link active" aria-current="page" href="/settings">Settings</a></li>
-            </ul>
-            <ul class="navbar-nav">
-              <li class="nav-item">
-                <button id="dark-toggle" class="btn btn-outline-light">
-                  <i class="bi bi-moon-fill"></i>
-                </button>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/logout">Logout</a>
-              </li>
-            </ul>
-          </div>
+            <a class="navbar-brand fw-bold" href="/">📹 NVR</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/manage-cameras">Camera Manager</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/playback">Playback</a></li>
+                    <li class="nav-item"><a class="nav-link active" aria-current="page" href="/settings">Settings</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button id="dark-toggle" class="btn btn-outline-light">
+                            <i class="bi bi-moon-fill"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
@@ -70,15 +153,32 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                                <button class="nav-link active text-start" id="v-pills-storage-tab" data-bs-toggle="pill" data-bs-target="#v-pills-storage" type="button" role="tab"><i class="bi bi-hdd-stack-fill me-2"></i>Storage</button>
-                                <button class="nav-link text-start" id="v-pills-general-tab" data-bs-toggle="pill" data-bs-target="#v-pills-general" type="button" role="tab"><i class="bi bi-sliders me-2"></i>General</button>
-                                <button class="nav-link text-start" id="v-pills-intervals-tab" data-bs-toggle="pill" data-bs-target="#v-pills-intervals" type="button" role="tab"><i class="bi bi-clock-history me-2"></i>Intervals</button>
-                                <button class="nav-link text-start" id="v-pills-logging-tab" data-bs-toggle="pill" data-bs-target="#v-pills-logging" type="button" role="tab"><i class="bi bi-terminal me-2"></i>Terminal Logging</button>
-                                <button class="nav-link text-start" id="v-pills-postproc-tab" data-bs-toggle="pill" data-bs-target="#v-pills-postproc" type="button" role="tab"><i class="bi bi-arrow-repeat me-2"></i>Post-processing</button>
-                                <button class="nav-link text-start" id="v-pills-ffmpeg-tab" data-bs-toggle="pill" data-bs-target="#v-pills-ffmpeg" type="button" role="tab"><i class="bi bi-film me-2"></i>FFmpeg</button>
-                                <button class="nav-link text-start" id="v-pills-federation-tab" data-bs-toggle="pill" data-bs-target="#v-pills-federation" type="button" role="tab"><i class="bi bi-diagram-3-fill me-2"></i>Remote Nodes</button>
-                                <button class="nav-link text-start" id="v-pills-maintenance-tab" data-bs-toggle="pill" data-bs-target="#v-pills-maintenance" type="button" role="tab"><i class="bi bi-tools me-2"></i>Maintenance</button>
+                            <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist"
+                                aria-orientation="vertical">
+                                <button class="nav-link active text-start" id="v-pills-storage-tab"
+                                    data-bs-toggle="pill" data-bs-target="#v-pills-storage" type="button" role="tab"><i
+                                        class="bi bi-hdd-stack-fill me-2"></i>Storage</button>
+                                <button class="nav-link text-start" id="v-pills-general-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-general" type="button" role="tab"><i
+                                        class="bi bi-sliders me-2"></i>General</button>
+                                <button class="nav-link text-start" id="v-pills-intervals-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-intervals" type="button" role="tab"><i
+                                        class="bi bi-clock-history me-2"></i>Intervals</button>
+                                <button class="nav-link text-start" id="v-pills-logging-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-logging" type="button" role="tab"><i
+                                        class="bi bi-terminal me-2"></i>Terminal Logging</button>
+                                <button class="nav-link text-start" id="v-pills-postproc-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-postproc" type="button" role="tab"><i
+                                        class="bi bi-arrow-repeat me-2"></i>Post-processing</button>
+                                <button class="nav-link text-start" id="v-pills-ffmpeg-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-ffmpeg" type="button" role="tab"><i
+                                        class="bi bi-film me-2"></i>FFmpeg</button>
+                                <button class="nav-link text-start" id="v-pills-federation-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-federation" type="button" role="tab"><i
+                                        class="bi bi-diagram-3-fill me-2"></i>Remote Nodes</button>
+                                <button class="nav-link text-start" id="v-pills-maintenance-tab" data-bs-toggle="pill"
+                                    data-bs-target="#v-pills-maintenance" type="button" role="tab"><i
+                                        class="bi bi-tools me-2"></i>Maintenance</button>
                             </div>
                         </div>
                         <div class="col-md-9">
@@ -88,29 +188,51 @@
                                     <h4>Storage Locations</h4>
                                     <p class="text-muted">Manage where your recordings are saved.</p>
                                     <div id="storage-list" class="list-group mb-3"></div>
-                                    <button type="button" class="btn btn-primary" id="add-storage-btn"><i class="bi bi-plus-circle"></i> Add Storage</button>
+                                    <button type="button" class="btn btn-primary" id="add-storage-btn"><i
+                                            class="bi bi-plus-circle"></i> Add Storage</button>
                                 </div>
                                 <!-- General Tab -->
                                 <div class="tab-pane fade" id="v-pills-general" role="tabpanel">
                                     <h4>General Settings</h4>
                                     <div class="mb-3">
                                         <label for="pm2_service_name" class="form-label">PM2 Service Name</label>
-                                        <input type="text" class="form-control" id="pm2_service_name" name="pm2_service_name">
-                                        <div class="form-text">The name of the service in PM2. Requires a restart to take full effect.</div>
+                                        <input type="text" class="form-control" id="pm2_service_name"
+                                            name="pm2_service_name">
+                                        <div class="form-text">The name of the service in PM2. Requires a restart to
+                                            take full effect.</div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="federation_key" class="form-label">Federation API Key</label>
                                         <div class="input-group">
                                             <input type="text" class="form-control" id="federation_key" readonly>
-                                            <button class="btn btn-outline-secondary" type="button" id="copy-fed-key-btn">Copy</button>
-                                            <button class="btn btn-outline-primary" type="button" id="gen-fed-key-btn">Generate New</button>
+                                            <button class="btn btn-outline-secondary" type="button"
+                                                id="copy-fed-key-btn">Copy</button>
+                                            <button class="btn btn-outline-primary" type="button"
+                                                id="gen-fed-key-btn">Generate New</button>
                                         </div>
-                                        <div class="form-text">Give this key to other NVR instances to allow them to connect to this server.</div>
+                                        <div class="form-text">Give this key to other NVR instances to allow them to
+                                            connect to this server.</div>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval (minutes)</label>
-                                        <input type="number" class="form-control" id="CLEANUP_INTERVAL_MS" name="CLEANUP_INTERVAL_MS">
-                                        <div class="form-text">How often to check for old recordings to delete (in minutes).</div>
+                                        <label for="CLEANUP_INTERVAL_MS" class="form-label">Cleanup Interval
+                                            (minutes)</label>
+                                        <input type="number" class="form-control" id="CLEANUP_INTERVAL_MS"
+                                            name="CLEANUP_INTERVAL_MS">
+                                        <div class="form-text">How often to check for old recordings to delete (in
+                                            minutes).</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="go2rtc_playback_method" class="form-label">Streaming Playback
+                                            Method</label>
+                                        <select class="form-select" id="go2rtc_playback_method"
+                                            name="go2rtc_playback_method">
+                                            <option value="auto">Auto (WebRTC → MSE → HLS)</option>
+                                            <option value="webrtc">WebRTC Only</option>
+                                            <option value="mse">MSE Only</option>
+                                            <option value="hls">HLS Only</option>
+                                        </select>
+                                        <div class="form-text">Choose how go2rtc streams are played in the dashboard.
+                                            "Auto" will try each method in order until one works.</div>
                                     </div>
                                 </div>
                                 <!-- Intervals Tab -->
@@ -118,7 +240,8 @@
                                     <h4>Intervals</h4>
                                     <div class="mb-3">
                                         <label for="PERIODIC_SYNC_MS" class="form-label">Periodic Sync (minutes)</label>
-                                        <input type="number" class="form-control" id="PERIODIC_SYNC_MS" name="PERIODIC_SYNC_MS">
+                                        <input type="number" class="form-control" id="PERIODIC_SYNC_MS"
+                                            name="PERIODIC_SYNC_MS">
                                         <div class="form-text">How often to sync camera streams (in minutes).</div>
                                     </div>
                                 </div>
@@ -127,44 +250,61 @@
                                     <h4>Terminal Logging</h4>
                                     <p class="text-muted">Toggle real-time logs in the server terminal.</p>
                                     <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" role="switch" id="log_terminal_general" name="log_terminal_general">
-                                        <label class="form-check-label" for="log_terminal_general">General Server Logs</label>
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="log_terminal_general" name="log_terminal_general">
+                                        <label class="form-check-label" for="log_terminal_general">General Server
+                                            Logs</label>
                                     </div>
                                     <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" role="switch" id="log_terminal_recorder" name="log_terminal_recorder">
-                                        <label class="form-check-label" for="log_terminal_recorder">Recorder Engine Logs</label>
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="log_terminal_recorder" name="log_terminal_recorder">
+                                        <label class="form-check-label" for="log_terminal_recorder">Recorder Engine
+                                            Logs</label>
                                     </div>
                                     <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" role="switch" id="log_terminal_storage" name="log_terminal_storage">
-                                        <label class="form-check-label" for="log_terminal_storage">Storage Management Logs</label>
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="log_terminal_storage" name="log_terminal_storage">
+                                        <label class="form-check-label" for="log_terminal_storage">Storage Management
+                                            Logs</label>
                                     </div>
                                 </div>
                                 <!-- Post-processing Tab -->
                                 <div class="tab-pane fade" id="v-pills-postproc" role="tabpanel">
                                     <h4>Post-processing</h4>
                                     <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" role="switch" id="FASTSTART_POSTPROC" name="FASTSTART_POSTPROC">
-                                        <label class="form-check-label" for="FASTSTART_POSTPROC">Enable Faststart Post-processing</label>
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="FASTSTART_POSTPROC" name="FASTSTART_POSTPROC">
+                                        <label class="form-check-label" for="FASTSTART_POSTPROC">Enable Faststart
+                                            Post-processing</label>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="POSTPROC_DELAY_MS" class="form-label">Post-processing Delay (ms)</label>
-                                        <input type="number" class="form-control" id="POSTPROC_DELAY_MS" name="POSTPROC_DELAY_MS">
+                                        <label for="POSTPROC_DELAY_MS" class="form-label">Post-processing Delay
+                                            (ms)</label>
+                                        <input type="number" class="form-control" id="POSTPROC_DELAY_MS"
+                                            name="POSTPROC_DELAY_MS">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="POSTPROC_STABLE_MS" class="form-label">Post-processing Stable Time (ms)</label>
-                                        <input type="number" class="form-control" id="POSTPROC_STABLE_MS" name="POSTPROC_STABLE_MS">
+                                        <label for="POSTPROC_STABLE_MS" class="form-label">Post-processing Stable Time
+                                            (ms)</label>
+                                        <input type="number" class="form-control" id="POSTPROC_STABLE_MS"
+                                            name="POSTPROC_STABLE_MS">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="POSTPROC_MAX_RETRY" class="form-label">Post-processing Max Retries</label>
-                                        <input type="number" class="form-control" id="POSTPROC_MAX_RETRY" name="POSTPROC_MAX_RETRY">
+                                        <label for="POSTPROC_MAX_RETRY" class="form-label">Post-processing Max
+                                            Retries</label>
+                                        <input type="number" class="form-control" id="POSTPROC_MAX_RETRY"
+                                            name="POSTPROC_MAX_RETRY">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="POSTPROC_RETRY_BACKOFF" class="form-label">Post-processing Retry Backoff (ms)</label>
-                                        <input type="number" class="form-control" id="POSTPROC_RETRY_BACKOFF" name="POSTPROC_RETRY_BACKOFF">
+                                        <label for="POSTPROC_RETRY_BACKOFF" class="form-label">Post-processing Retry
+                                            Backoff (ms)</label>
+                                        <input type="number" class="form-control" id="POSTPROC_RETRY_BACKOFF"
+                                            name="POSTPROC_RETRY_BACKOFF">
                                     </div>
                                     <div class="mb-3">
                                         <label for="QUEUE_CONCURRENCY" class="form-label">Queue Concurrency</label>
-                                        <input type="number" class="form-control" id="QUEUE_CONCURRENCY" name="QUEUE_CONCURRENCY">
+                                        <input type="number" class="form-control" id="QUEUE_CONCURRENCY"
+                                            name="QUEUE_CONCURRENCY">
                                     </div>
                                 </div>
                                 <!-- FFmpeg Tab -->
@@ -172,35 +312,46 @@
                                     <h4>FFmpeg</h4>
                                     <div class="mb-3">
                                         <label for="FFMPEG_MAX_RETRY" class="form-label">FFmpeg Max Retry</label>
-                                        <input type="number" class="form-control" id="FFMPEG_MAX_RETRY" name="FFMPEG_MAX_RETRY">
+                                        <input type="number" class="form-control" id="FFMPEG_MAX_RETRY"
+                                            name="FFMPEG_MAX_RETRY">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="FFMPEG_BASE_BACKOFF_MS" class="form-label">FFmpeg Base Backoff (ms)</label>
-                                        <input type="number" class="form-control" id="FFMPEG_BASE_BACKOFF_MS" name="FFMPEG_BASE_BACKOFF_MS">
+                                        <label for="FFMPEG_BASE_BACKOFF_MS" class="form-label">FFmpeg Base Backoff
+                                            (ms)</label>
+                                        <input type="number" class="form-control" id="FFMPEG_BASE_BACKOFF_MS"
+                                            name="FFMPEG_BASE_BACKOFF_MS">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="FFMPEG_MAX_BACKOFF_MS" class="form-label">FFmpeg Max Backoff (ms)</label>
-                                        <input type="number" class="form-control" id="FFMPEG_MAX_BACKOFF_MS" name="FFMPEG_MAX_BACKOFF_MS">
+                                        <label for="FFMPEG_MAX_BACKOFF_MS" class="form-label">FFmpeg Max Backoff
+                                            (ms)</label>
+                                        <input type="number" class="form-control" id="FFMPEG_MAX_BACKOFF_MS"
+                                            name="FFMPEG_MAX_BACKOFF_MS">
                                     </div>
                                     <div class="mb-3">
                                         <label for="FFMPEG_COOL_OFF_MS" class="form-label">FFmpeg Cool Off (ms)</label>
-                                        <input type="number" class="form-control" id="FFMPEG_COOL_OFF_MS" name="FFMPEG_COOL_OFF_MS">
+                                        <input type="number" class="form-control" id="FFMPEG_COOL_OFF_MS"
+                                            name="FFMPEG_COOL_OFF_MS">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="FFMPEG_WATCHDOG_TIMEOUT_MS" class="form-label">FFmpeg Watchdog Timeout (ms)</label>
-                                        <input type="number" class="form-control" id="FFMPEG_WATCHDOG_TIMEOUT_MS" name="FFMPEG_WATCHDOG_TIMEOUT_MS">
+                                        <label for="FFMPEG_WATCHDOG_TIMEOUT_MS" class="form-label">FFmpeg Watchdog
+                                            Timeout (ms)</label>
+                                        <input type="number" class="form-control" id="FFMPEG_WATCHDOG_TIMEOUT_MS"
+                                            name="FFMPEG_WATCHDOG_TIMEOUT_MS">
                                     </div>
                                 </div>
                                 <!-- Federation Tab -->
                                 <div class="tab-pane fade" id="v-pills-federation" role="tabpanel">
                                     <h4>Multi-Server Federation</h4>
-                                    <p class="text-muted">Connect to other NVR instances to view their cameras and recordings.</p>
-                                    
+                                    <p class="text-muted">Connect to other NVR instances to view their cameras and
+                                        recordings.</p>
+
                                     <div class="card mb-4">
                                         <div class="card-header bg-light">Discover Nodes</div>
                                         <div class="card-body">
-                                            <p class="small text-muted">Scan the local network for other NVR servers.</p>
-                                            <button type="button" class="btn btn-outline-primary btn-sm mb-3" id="discover-nodes-btn">
+                                            <p class="small text-muted">Scan the local network for other NVR servers.
+                                            </p>
+                                            <button type="button" class="btn btn-outline-primary btn-sm mb-3"
+                                                id="discover-nodes-btn">
                                                 <i class="bi bi-search"></i> Scan Local Network
                                             </button>
                                             <div id="discovery-results" class="list-group list-group-flush"></div>
@@ -209,7 +360,8 @@
 
                                     <h5>Linked Remote Nodes</h5>
                                     <div id="remote-nodes-list" class="list-group mb-3"></div>
-                                    <button type="button" class="btn btn-primary" id="add-node-btn"><i class="bi bi-plus-circle"></i> Add Remote Node</button>
+                                    <button type="button" class="btn btn-primary" id="add-node-btn"><i
+                                            class="bi bi-plus-circle"></i> Add Remote Node</button>
                                 </div>
                                 <!-- Maintenance Tab -->
                                 <div class="tab-pane fade" id="v-pills-maintenance" role="tabpanel">
@@ -220,23 +372,28 @@
                                     <div class="card mt-4">
                                         <div class="card-body">
                                             <h5 class="card-title">Application Update</h5>
-                                            <p class="card-text">Pull the latest changes from Git. This requires the app to be running under PM2.</p>
-                                            <button class="btn btn-primary" type="button" id="update-app-btn"><i class="bi bi-cloud-arrow-down-fill"></i> Update Application</button>
+                                            <p class="card-text">Pull the latest changes from Git. This requires the app
+                                                to be running under PM2.</p>
+                                            <button class="btn btn-primary" type="button" id="update-app-btn"><i
+                                                    class="bi bi-cloud-arrow-down-fill"></i> Update Application</button>
                                         </div>
                                     </div>
 
                                     <div class="card mt-4">
                                         <div class="card-body">
                                             <h5 class="card-title">Run Custom Maintenance Script</h5>
-                                            <p class="card-text">Run the predefined maintenance script on the server (e.g., /opt/nvr/maintenance.sh). Requires sudo configuration.</p>
-                                            <button class="btn btn-secondary" type="button" id="run-script-btn"><i class="bi bi-terminal"></i> Run Maintenance Script</button>
+                                            <p class="card-text">Run the predefined maintenance script on the server
+                                                (e.g., /opt/nvr/maintenance.sh). Requires sudo configuration.</p>
+                                            <button class="btn btn-secondary" type="button" id="run-script-btn"><i
+                                                    class="bi bi-terminal"></i> Run Maintenance Script</button>
                                         </div>
                                     </div>
 
                                     <div class="card mt-4">
                                         <div class="card-body">
                                             <h5 class="card-title">Command Output</h5>
-                                            <pre class="mt-2 p-2 bg-dark text-white rounded" style="min-height: 150px; max-height: 400px; overflow-y: auto;"><code id="maintenance-output-log">Output will appear here...</code></pre>
+                                            <pre class="mt-2 p-2 bg-dark text-white rounded"
+                                                style="min-height: 150px; max-height: 400px; overflow-y: auto;"><code id="maintenance-output-log">Output will appear here...</code></pre>
                                         </div>
                                     </div>
                                     <!-- END NEW -->
@@ -245,23 +402,29 @@
                                         <div class="card-body">
                                             <h5 class="card-title">View Logs</h5>
                                             <p class="card-text">View the latest logs from the PM2 service.</p>
-                                            <button class="btn btn-info" type="button" id="view-logs-btn"><i class="bi bi-card-text"></i> View Logs</button>
-                                            <pre class="mt-3 p-2 bg-dark text-white rounded" style="max-height: 400px; overflow-y: auto;"><code id="logs-container">Logs will appear here...</code></pre>
+                                            <button class="btn btn-info" type="button" id="view-logs-btn"><i
+                                                    class="bi bi-card-text"></i> View Logs</button>
+                                            <pre class="mt-3 p-2 bg-dark text-white rounded"
+                                                style="max-height: 400px; overflow-y: auto;"><code id="logs-container">Logs will appear here...</code></pre>
                                         </div>
                                     </div>
 
                                     <div class="card mt-4">
                                         <div class="card-body">
                                             <h5 class="card-title">Application Control</h5>
-                                            <p class="card-text">Use these actions to manage the application process. This will restart all services managed by PM2.</p>
-                                            <button class="btn btn-warning" type="button" id="reboot-app-btn"><i class="bi bi-bootstrap-reboot"></i> Reboot Application</button>
+                                            <p class="card-text">Use these actions to manage the application process.
+                                                This will restart all services managed by PM2.</p>
+                                            <button class="btn btn-warning" type="button" id="reboot-app-btn"><i
+                                                    class="bi bi-bootstrap-reboot"></i> Reboot Application</button>
                                         </div>
                                     </div>
                                     <div class="card mt-4">
                                         <div class="card-body">
                                             <h5 class="card-title">Log Management</h5>
-                                            <p class="card-text">This will flush the logs for all PM2 processes, clearing out the log files.</p>
-                                            <button class="btn btn-danger" type="button" id="flush-logs-btn"><i class="bi bi-trash2"></i> Clear PM2 Logs</button>
+                                            <p class="card-text">This will flush the logs for all PM2 processes,
+                                                clearing out the log files.</p>
+                                            <button class="btn btn-danger" type="button" id="flush-logs-btn"><i
+                                                    class="bi bi-trash2"></i> Clear PM2 Logs</button>
                                         </div>
                                     </div>
 
@@ -272,12 +435,16 @@
                                         </div>
                                         <div class="card-body">
                                             <h5 class="card-title text-danger">Delete All Recordings</h5>
-                                            <p class="card-text">This will permanently delete all video recordings from the filesystem and clear all recording metadata from the database. This action cannot be undone.</p>
-                                            <button class="btn btn-danger" type="button" id="delete-all-recordings-btn"><i class="bi bi-trash-fill"></i> Delete All Recordings</button>
+                                            <p class="card-text">This will permanently delete all video recordings from
+                                                the filesystem and clear all recording metadata from the database. This
+                                                action cannot be undone.</p>
+                                            <button class="btn btn-danger" type="button"
+                                                id="delete-all-recordings-btn"><i class="bi bi-trash-fill"></i> Delete
+                                                All Recordings</button>
                                         </div>
                                     </div>
                                     <!-- End Danger Zone -->
-                                    
+
                                 </div>
                             </div>
                         </div>
@@ -303,15 +470,18 @@
                         <input type="hidden" id="node-id">
                         <div class="mb-3">
                             <label for="node-label" class="form-label">Friendly Label</label>
-                            <input type="text" class="form-control" id="node-label" placeholder="e.g. Home, Office" required>
+                            <input type="text" class="form-control" id="node-label" placeholder="e.g. Home, Office"
+                                required>
                         </div>
                         <div class="mb-3">
                             <label for="node-url" class="form-label">Remote URL</label>
-                            <input type="url" class="form-control" id="node-url" placeholder="http://192.168.1.100:3000" required>
+                            <input type="url" class="form-control" id="node-url" placeholder="http://192.168.1.100:3000"
+                                required>
                         </div>
                         <div class="mb-3">
                             <label for="node-key" class="form-label">API Key</label>
-                            <input type="text" class="form-control" id="node-key" placeholder="Enter the federation key from the remote server" required>
+                            <input type="text" class="form-control" id="node-key"
+                                placeholder="Enter the federation key from the remote server" required>
                         </div>
                     </form>
                 </div>
@@ -342,7 +512,8 @@
                             <label for="storage-path" class="form-label">Path</label>
                             <div class="input-group">
                                 <input type="text" class="form-control" id="storage-path" required>
-                                <button class="btn btn-outline-secondary" type="button" id="browse-storage-path-btn">Browse</button>
+                                <button class="btn btn-outline-secondary" type="button"
+                                    id="browse-storage-path-btn">Browse</button>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -360,7 +531,8 @@
     </div>
 
     <!-- Directory Browser Modal -->
-    <div class="modal fade" id="directory-browser-modal" tabindex="-1" aria-labelledby="directoryBrowserLabel" aria-hidden="true">
+    <div class="modal fade" id="directory-browser-modal" tabindex="-1" aria-labelledby="directoryBrowserLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -386,7 +558,7 @@
             const settingsForm = document.getElementById('settings-form');
             const storageListEl = document.getElementById('storage-list');
             const addStorageBtn = document.getElementById('add-storage-btn');
-            
+
             const storageModal = new bootstrap.Modal(document.getElementById('storage-modal'));
             const storageForm = document.getElementById('storage-form');
             const storageIdInput = document.getElementById('storage-id');
@@ -547,11 +719,11 @@
                 discoverNodesBtn.disabled = true;
                 discoverNodesBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Scanning...';
                 discoveryResultsEl.innerHTML = '';
-                
+
                 try {
                     const response = await fetch('/api/system/discover');
                     const found = await response.json();
-                    
+
                     if (found.length === 0) {
                         discoveryResultsEl.innerHTML = '<div class="list-group-item small text-muted">No other NVRs found on the network.</div>';
                     } else {
@@ -696,7 +868,7 @@
                     const response = await fetch(`/api/browse?path=${encodeURIComponent(path || '')}`);
                     if (!response.ok) throw new Error('Failed to load directories');
                     const data = await response.json();
-                    
+
                     currentBrowserPath = data.currentPath;
                     currentPathEl.textContent = data.currentPath;
                     directoryListEl.innerHTML = '';
@@ -750,7 +922,7 @@
                     // Fetch all settings from database
                     const response = await fetch('/api/settings');
                     const settings = await response.json();
-                    
+
                     // Fallback to config if database is empty for these keys
                     const configRes = await fetch('/api/config');
                     const config = await configRes.json();
@@ -777,14 +949,14 @@
                     setVal('pm2_service_name', 'pm2_service_name');
                     setVal('CLEANUP_INTERVAL_MS', 'CLEANUP_INTERVAL_MS', true);
                     setVal('PERIODIC_SYNC_MS', 'PERIODIC_SYNC_MS', true);
-                    
+
                     setChecked('FASTSTART_POSTPROC', 'FASTSTART_POSTPROC');
                     setVal('POSTPROC_DELAY_MS', 'POSTPROC_DELAY_MS');
                     setVal('POSTPROC_STABLE_MS', 'POSTPROC_STABLE_MS');
                     setVal('POSTPROC_MAX_RETRY', 'POSTPROC_MAX_RETRY');
                     setVal('POSTPROC_RETRY_BACKOFF', 'POSTPROC_RETRY_BACKOFF');
                     setVal('QUEUE_CONCURRENCY', 'QUEUE_CONCURRENCY');
-                    
+
                     setVal('FFMPEG_MAX_RETRY', 'FFMPEG_MAX_RETRY');
                     setVal('FFMPEG_BASE_BACKOFF_MS', 'FFMPEG_BASE_BACKOFF_MS');
                     setVal('FFMPEG_MAX_BACKOFF_MS', 'FFMPEG_MAX_BACKOFF_MS');
@@ -794,7 +966,13 @@
                     setChecked('log_terminal_general', 'log_terminal_general');
                     setChecked('log_terminal_recorder', 'log_terminal_recorder');
                     setChecked('log_terminal_storage', 'log_terminal_storage');
-                    
+
+                    // Playback method select
+                    const playbackMethod = getValue('go2rtc_playback_method');
+                    if (playbackMethod) {
+                        document.getElementById('go2rtc_playback_method').value = playbackMethod;
+                    }
+
                     if (settings.federation_key) {
                         document.getElementById('federation_key').value = settings.federation_key;
                     } else if (config.federation_key) {
@@ -809,7 +987,7 @@
                 event.preventDefault();
                 const formData = new FormData(settingsForm);
                 const allSettings = {};
-                
+
                 // Process ALL form elements to ensure unchecked checkboxes are included
                 Array.from(settingsForm.elements).forEach(input => {
                     if (!input.name) return; // Skip elements without a name attribute
@@ -871,7 +1049,7 @@
             const runScriptBtn = document.getElementById('run-script-btn');
             const maintenanceLog = document.getElementById('maintenance-output-log');
 
-            if(updateAppBtn) {
+            if (updateAppBtn) {
                 updateAppBtn.addEventListener('click', () => {
                     if (!confirm('Are you sure you want to update the application? This will pull the latest code and restart the service.')) return;
                     maintenanceLog.textContent = 'Starting application update...';
@@ -886,7 +1064,7 @@
                 });
             }
 
-            if(runScriptBtn) {
+            if (runScriptBtn) {
                 runScriptBtn.addEventListener('click', () => {
                     if (!confirm('Are you sure you want to run the custom maintenance script?')) return;
                     maintenanceLog.textContent = 'Running maintenance script...';
@@ -901,7 +1079,7 @@
                 });
             }
 
-            if(viewLogsBtn) {
+            if (viewLogsBtn) {
                 viewLogsBtn.addEventListener('click', async () => {
                     logsContainer.textContent = 'Loading logs...';
                     try {
@@ -915,7 +1093,7 @@
                 });
             }
 
-            if(rebootAppBtn) {
+            if (rebootAppBtn) {
                 rebootAppBtn.addEventListener('click', async () => {
                     if (confirm('Are you sure you want to reboot the application? This will restart the server process.')) {
                         try {
@@ -930,7 +1108,7 @@
                 });
             }
 
-            if(flushLogsBtn) {
+            if (flushLogsBtn) {
                 flushLogsBtn.addEventListener('click', async () => {
                     if (confirm('Are you sure you want to clear all PM2 logs? This action cannot be undone.')) {
                         try {
@@ -947,7 +1125,7 @@
 
             // --- Danger Zone Logic ---
             const deleteAllRecordingsBtn = document.getElementById('delete-all-recordings-btn');
-            if(deleteAllRecordingsBtn) {
+            if (deleteAllRecordingsBtn) {
                 deleteAllRecordingsBtn.addEventListener('click', async () => {
                     if (confirm('ARE YOU ABSOLUTELY SURE?\n\nThis will permanently delete ALL recordings from the disk and the database. This action cannot be undone.')) {
                         try {
@@ -969,4 +1147,5 @@
         });
     </script>
 </body>
+
 </html>

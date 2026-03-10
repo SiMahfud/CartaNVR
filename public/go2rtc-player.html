@@ -60,6 +60,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const camId = urlParams.get('cam');
+        const preferredMethod = urlParams.get('method') || 'auto';
         const statusEl = document.getElementById('status');
         const methodBadge = document.getElementById('method-badge');
         const video = document.getElementById('video');
@@ -112,9 +113,40 @@
         }
 
         /**
-         * Auto-fallback chain: WebRTC → MSE → HLS
+         * Streaming with configurable method or auto-fallback chain
          */
         async function startStreaming() {
+            if (preferredMethod === 'webrtc') {
+                setStatus('Connecting WebRTC...');
+                setMethod('WebRTC');
+                const ok = await tryWebRTC();
+                if (ok) { setMethod('WebRTC'); return; }
+                setStatus('WebRTC failed');
+                setMethod('');
+                return;
+            }
+
+            if (preferredMethod === 'mse') {
+                setStatus('Connecting MSE...');
+                setMethod('MSE');
+                const ok = await tryMSE();
+                if (ok) { setMethod('MSE'); return; }
+                setStatus('MSE failed');
+                setMethod('');
+                return;
+            }
+
+            if (preferredMethod === 'hls') {
+                setStatus('Connecting HLS...');
+                setMethod('HLS');
+                const ok = await tryHLS();
+                if (ok) { setMethod('HLS'); return; }
+                setStatus('HLS failed');
+                setMethod('');
+                return;
+            }
+
+            // Auto fallback: WebRTC → MSE → HLS
             setStatus('Trying WebRTC...');
             setMethod('WebRTC');
             const webrtcOk = await tryWebRTC();

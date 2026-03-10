@@ -367,6 +367,8 @@
                 statusEl.className = "camera-status status-loading";
                 const iframe = document.createElement('iframe');
 
+                const methodParam = (camera.stream_method === 'go2rtc' && playbackMethod !== 'auto') ? `&method=${playbackMethod}` : '';
+
                 // If remote, use the remote server's player directly
                 if (camera.isRemote && camera.nodeUrl) {
                     // We need to strip the prefix 'remote_...' to get the original ID for the remote server
@@ -374,12 +376,12 @@
                     const playerCacheBuster = `v=${Date.now()}`;
                     const playerPage = camera.stream_method === 'go2rtc' ? `go2rtc-player.html?${playerCacheBuster}&` :
                         camera.stream_method === 'jsmpeg' ? `jsmpeg-player.html?${playerCacheBuster}&` : `dash-player.html?${playerCacheBuster}&`;
-                    iframe.src = `${camera.nodeUrl}/${playerPage}cam=${originalId}`;
+                    iframe.src = `${camera.nodeUrl}/${playerPage}cam=${originalId}${methodParam}`;
                 } else {
                     const playerCacheBuster = `v=${Date.now()}`;
                     const playerPage = camera.stream_method === 'go2rtc' ? `go2rtc-player.html?${playerCacheBuster}&` :
                         camera.stream_method === 'jsmpeg' ? `jsmpeg-player.html?${playerCacheBuster}&` : `dash-player.html?${playerCacheBuster}&`;
-                    iframe.src = `${playerPage}cam=${cameraId}`;
+                    iframe.src = `${playerPage}cam=${cameraId}${methodParam}`;
                 }
 
                 iframe.allow = "fullscreen";
@@ -421,8 +423,18 @@
             };
 
             let allCameras = [];
+            let playbackMethod = 'auto';
 
             try {
+                // Fetch playback method setting
+                try {
+                    const settingsRes = await fetch('/api/settings');
+                    const settings = await settingsRes.json();
+                    if (settings.go2rtc_playback_method) {
+                        playbackMethod = settings.go2rtc_playback_method;
+                    }
+                } catch (e) { /* ignore, use default */ }
+
                 const response = await fetch('/api/cameras');
                 const cameras = await response.json();
                 allCameras = cameras;
