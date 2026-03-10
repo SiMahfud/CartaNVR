@@ -51,6 +51,31 @@ async function initialize() {
           await go2rtcManager.addStream(cam.id, cam.rtsp_url);
         }
       }
+
+      // Periodic re-sync: re-register missing streams every 60s
+      setInterval(async () => {
+        if (!go2rtcManager.isRunning()) return;
+        try {
+          const cams = await database.getAllCameras();
+          // Get currently registered streams from go2rtc
+          let registered = {};
+          try {
+            registered = await go2rtcManager.getStreams() || {};
+          } catch { /* go2rtc might be restarting */ return; }
+
+          for (const cam of cams) {
+            if (cam.enabled !== false && cam.stream_method === 'go2rtc' && cam.rtsp_url) {
+              const streamName = `cam_${cam.id}`;
+              if (!registered[streamName]) {
+                logger.log('general', `[GO2RTC-SYNC] Re-registering missing stream: ${streamName}`);
+                await go2rtcManager.addStream(cam.id, cam.rtsp_url).catch(() => { });
+              }
+            }
+          }
+        } catch (err) {
+          // Silent fail — will retry next interval
+        }
+      }, 60000);
     } catch (err) {
       logger.log('general', `[GO2RTC] Failed to initialize: ${err.message}`);
     }

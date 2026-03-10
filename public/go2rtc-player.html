@@ -113,73 +113,74 @@
         }
 
         /**
-         * Streaming with configurable method or auto-fallback chain
+         * Streaming with configurable method or auto-fallback chain + auto-retry
          */
+        const RETRY_DELAY = 5000;
+
         async function startStreaming() {
-            if (preferredMethod === 'webrtc') {
-                setStatus('Connecting WebRTC...');
-                setMethod('WebRTC');
-                const ok = await tryWebRTC();
-                if (ok) { setMethod('WebRTC'); return; }
-                setStatus('WebRTC failed');
-                setMethod('');
-                return;
-            }
-
-            if (preferredMethod === 'mse') {
-                setStatus('Connecting MSE...');
-                setMethod('MSE');
-                const ok = await tryMSE();
-                if (ok) { setMethod('MSE'); return; }
-                setStatus('MSE failed');
-                setMethod('');
-                return;
-            }
-
-            if (preferredMethod === 'hls') {
-                setStatus('Connecting HLS...');
-                setMethod('HLS');
-                const ok = await tryHLS();
-                if (ok) { setMethod('HLS'); return; }
-                setStatus('HLS failed');
-                setMethod('');
-                return;
-            }
-
-            // Auto fallback: WebRTC → MSE → HLS
-            setStatus('Trying WebRTC...');
-            setMethod('WebRTC');
-            const webrtcOk = await tryWebRTC();
-            if (webrtcOk) {
-                setMethod('WebRTC');
-                return;
-            }
-
-            // Clean up any leftover WebRTC connection
+            // Clean up before each attempt
             if (activePeerConnection) {
                 try { activePeerConnection.close(); } catch (e) { }
                 activePeerConnection = null;
             }
             video.srcObject = null;
+            video.src = '';
 
-            setStatus('Trying MSE...');
-            setMethod('MSE');
-            const mseOk = await tryMSE();
-            if (mseOk) {
+            let success = false;
+
+            if (preferredMethod === 'webrtc') {
+                setStatus('Connecting WebRTC...');
+                setMethod('WebRTC');
+                success = await tryWebRTC();
+                if (success) { setMethod('WebRTC'); return; }
+            } else if (preferredMethod === 'mse') {
+                setStatus('Connecting MSE...');
                 setMethod('MSE');
-                return;
-            }
-
-            setStatus('Trying HLS...');
-            setMethod('HLS');
-            const hlsOk = await tryHLS();
-            if (hlsOk) {
+                success = await tryMSE();
+                if (success) { setMethod('MSE'); return; }
+            } else if (preferredMethod === 'hls') {
+                setStatus('Connecting HLS...');
                 setMethod('HLS');
-                return;
+                success = await tryHLS();
+                if (success) { setMethod('HLS'); return; }
+            } else {
+                // Auto fallback: WebRTC → MSE → HLS
+                setStatus('Trying WebRTC...');
+                setMethod('WebRTC');
+                if (await tryWebRTC()) { setMethod('WebRTC'); return; }
+
+                // Clean up WebRTC before trying MSE
+                if (activePeerConnection) {
+                    try { activePeerConnection.close(); } catch (e) { }
+                    activePeerConnection = null;
+                }
+                video.srcObject = null;
+
+                setStatus('Trying MSE...');
+                setMethod('MSE');
+                if (await tryMSE()) { setMethod('MSE'); return; }
+
+                setStatus('Trying HLS...');
+                setMethod('HLS');
+                if (await tryHLS()) { setMethod('HLS'); return; }
             }
 
-            setStatus('All streaming methods failed');
+            // All methods failed — schedule retry with countdown
             setMethod('');
+            let remaining = RETRY_DELAY / 1000;
+            setStatus(`Failed. Retrying in ${remaining}s...`);
+            const countdown = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    setStatus(`Failed. Retrying in ${remaining}s...`);
+                } else {
+                    clearInterval(countdown);
+                }
+            }, 1000);
+            setTimeout(() => {
+                clearInterval(countdown);
+                startStreaming();
+            }, RETRY_DELAY);
         }
 
         /**
