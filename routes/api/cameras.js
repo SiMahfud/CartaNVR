@@ -41,6 +41,37 @@ router.post('/', isAuthenticated, async (req, res) => {
   }
 });
 
+// POST /api/cameras/:id/restart-stream
+router.post('/:id/restart-stream', isAuthenticated, async (req, res) => {
+  try {
+    const cameraId = req.params.id;
+    const camera = await database.getCameraById(cameraId);
+    
+    if (!camera) {
+      return res.status(404).json({ error: 'Camera not found' });
+    }
+
+    if (camera.stream_method === 'go2rtc' && camera.enabled !== false) {
+      console.log(`[CAMERA] Manually restarting go2rtc stream for cam ${cameraId}`);
+      // Hapus stream dari go2rtc
+      await go2rtcManager.removeStream(cameraId).catch(() => {});
+      
+      // Beri jeda sebentar agar go2rtc benar-benar membersihkan resource lamanya
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Daftarkan ulang stream ke go2rtc
+      await go2rtcManager.addStream(cameraId, camera.rtsp_url, camera.has_audio).catch(() => {});
+      
+      res.json({ message: 'Stream restarted successfully' });
+    } else {
+      res.status(400).json({ error: 'Camera is not using go2rtc or is disabled' });
+    }
+  } catch (error) {
+    console.error('Failed to restart stream:', error);
+    res.status(500).json({ error: 'Failed to restart stream' });
+  }
+});
+
 // PUT /api/cameras/:id
 router.put('/:id', isAuthenticated, async (req, res) => {
   try {

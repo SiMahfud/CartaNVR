@@ -55,14 +55,12 @@
 
 <body>
     <div id="status">Connecting...</div>
-    <div id="method-badge"></div>
     <video id="video" autoplay muted playsinline controls></video>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const camId = urlParams.get('cam');
         const preferredMethod = urlParams.get('method') || 'auto';
         const statusEl = document.getElementById('status');
-        const methodBadge = document.getElementById('method-badge');
         const video = document.getElementById('video');
         const streamSrc = `cam_${camId}`;
 
@@ -74,7 +72,7 @@
         }
 
         function setMethod(text) {
-            methodBadge.textContent = text;
+            window.parent.postMessage({ type: 'streamMethod', cameraId: camId, method: text }, "*");
         }
 
         function reportResolution() {
@@ -169,6 +167,10 @@
             setMethod('');
             let remaining = RETRY_DELAY / 1000;
             setStatus(`Failed. Retrying in ${remaining}s...`);
+            
+            // Trigger restream to backend to fix stale connections
+            fetch(`/api/cameras/${camId}/restart-stream`, { method: 'POST' }).catch(console.error);
+
             const countdown = setInterval(() => {
                 remaining--;
                 if (remaining > 0) {

@@ -161,6 +161,9 @@
         body.dark .dropdown-divider {
             border-top-color: rgba(255, 255, 255, 0.15);
         }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
     </style>
 </head>
 
@@ -349,6 +352,21 @@
                         container.style.aspectRatio = newAspectRatio;
                     }
                 }
+                if (data.type === 'streamMethod' && data.cameraId) {
+                    const container = document.getElementById(`camera-container-${data.cameraId}`);
+                    if (container) {
+                        const card = container.closest('.camera-card');
+                        const methodBadge = card.querySelector('.camera-method');
+                        if (methodBadge) {
+                            if (data.method) {
+                                methodBadge.textContent = data.method;
+                                methodBadge.classList.remove('d-none');
+                            } else {
+                                methodBadge.classList.add('d-none');
+                            }
+                        }
+                    }
+                }
             });
 
             const startPlayer = (cameraId) => {
@@ -408,6 +426,9 @@
                         statusEl.textContent = "Disconnected";
                         statusEl.className = "camera-status status-disconnected";
                         container.style.aspectRatio = '16 / 9';
+                        
+                        const methodBadge = card.querySelector('.camera-method');
+                        if (methodBadge) methodBadge.classList.add('d-none');
                     }
                 }
             };
@@ -521,8 +542,14 @@
                     card.innerHTML = `
                     <div class="camera-header">
                         <span class="camera-header-title text-truncate">${camera.name} ${nodeBadge}</span>
-                        <span class="camera-status ${statusClass}">${statusText}</span>
-                        ${fullscreenBtn}
+                        <div class="d-flex align-items-center">
+                            <span class="camera-method d-none badge bg-success me-2" style="font-size: 0.70rem; padding: 0.35em 0.5em;"></span>
+                            <button class="btn btn-sm btn-outline-light py-0 px-1 me-2 restart-btn" data-camera-id="${camera.id}" title="Restart Stream" style="font-size: 0.8rem; border-color: rgba(255,255,255,0.5);" ${isDisabled ? 'style="display:none;"' : ''}>
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                            <span class="camera-status ${statusClass} me-2" style="margin-left: 0;">${statusText}</span>
+                            ${fullscreenBtn}
+                        </div>
                     </div>
                     <div class="camera-body" id="camera-container-${camera.id}">
                         ${isDisabled ? '<div class="text-white small">Camera is disabled</div>' : ''}
@@ -533,6 +560,27 @@
                     if (fsBtn) {
                         fsBtn.addEventListener('click', (e) => {
                             toggleFullscreen(e.currentTarget.dataset.cameraId);
+                        });
+                    }
+                    const restartBtn = card.querySelector('.restart-btn');
+                    if (restartBtn) {
+                        restartBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const icon = restartBtn.querySelector('i');
+                            icon.classList.add('spin');
+                            restartBtn.disabled = true;
+                            
+                            try {
+                                await fetch(`/api/cameras/${camera.id}/restart-stream`, { method: 'POST' });
+                                stopPlayer(camera.id);
+                                setTimeout(() => startPlayer(camera.id), 500);
+                            } catch (err) {
+                                console.error('Failed to restart stream:', err);
+                            } finally {
+                                restartBtn.disabled = false;
+                                icon.classList.remove('spin');
+                            }
                         });
                     }
                 });
