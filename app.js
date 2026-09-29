@@ -11,25 +11,35 @@ const passport = require('passport');
 const initializePassport = require('./lib/passport-config');
 
 const app = express();
+app.set('trust proxy', 1);
 // StreamRelay initialization moved to server.js
 
 
-// Parse CORS whitelist dari .env (comma-separated, support wildcard *.domain.com)
-const corsWhitelist = (process.env.CORS_WHITELIST || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
+// Parse CORS whitelist dari .env (support wildcard *.domain.com & full URL)
 function isOriginWhitelisted(origin) {
   try {
-    const hostname = new URL(origin).hostname;
-    return corsWhitelist.some(pattern => {
-      if (pattern.startsWith('*.')) {
+    const whitelist = (process.env.CORS_WHITELIST || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const originUrl = new URL(origin);
+    const originHostname = originUrl.hostname.toLowerCase();
+
+    return whitelist.some(pattern => {
+      let cleanPattern = pattern.toLowerCase();
+      try {
+        if (cleanPattern.startsWith('http://') || cleanPattern.startsWith('https://')) {
+          cleanPattern = new URL(cleanPattern).hostname.toLowerCase();
+        }
+      } catch {}
+
+      if (cleanPattern.startsWith('*.')) {
         // Wildcard: cocokkan domain utama dan semua subdomain
-        const baseDomain = pattern.slice(2); // hapus "*."
-        return hostname === baseDomain || hostname.endsWith('.' + baseDomain);
+        const baseDomain = cleanPattern.slice(2); // hapus "*."
+        return originHostname === baseDomain || originHostname.endsWith('.' + baseDomain);
       }
-      return hostname === pattern;
+      return originHostname === cleanPattern;
     });
   } catch { return false; }
 }
@@ -52,44 +62,60 @@ refreshCorsNodeCache();
 // (triggered by any setting change or can be extended for node changes)
 dbEmitter.on('remoteNodesChanged', () => refreshCorsNodeCache());
 
-// Konfigurasi CORS Dinamis untuk Federation
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Izinkan jika tidak ada origin (seperti permintaan server-to-server atau lokal)
-    if (!origin) return callback(null, true);
+// Konfigurasi CORS Dinamis untuk Federation & Web UI
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.headers.origin;
 
-    try {
-      // Izinkan origin sendiri (local loopback dan hostname saat ini)
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
+  // Izinkan jika tidak ada origin (seperti permintaan server-to-server atau lokal tanpa Origin header)
+  if (!origin) {
+    return callback(null, { origin: true, credentials: true });
+  }
 
-      // Izinkan IP lokal/private network (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-      const privateIpPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?/;
-      if (privateIpPattern.test(origin)) {
-        return callback(null, true);
-      }
+  try {
+    const originUrl = new URL(origin);
+    const hostHeader = req.get('x-forwarded-host') || req.get('host') || '';
+    const currentHost = hostHeader.split(',')[0].trim().toLowerCase();
+    const currentHostname = currentHost.split(':')[0];
 
-      // Periksa whitelist dari .env (CORS_WHITELIST)
-      if (isOriginWhitelisted(origin)) {
-        return callback(null, true);
-      }
-
-      // Periksa apakah origin terdaftar di cached remote_nodes
-      if (cachedNodeUrls.some(url => origin.startsWith(url))) {
-        return callback(null, true);
-      }
-
-      // Jika tidak cocok, tolak
-      callback(new Error('Not allowed by CORS'));
-    } catch (err) {
-      callback(err);
+    // 1. Izinkan jika origin sama dengan Host server saat ini (Same-Origin)
+    if (currentHost && (originUrl.host.toLowerCase() === currentHost || originUrl.hostname.toLowerCase() === currentHostname)) {
+      return callback(null, { origin: true, credentials: true });
     }
-  },
-  credentials: true
+
+    // 2. Izinkan origin loopback (localhost dan 127.0.0.1)
+    if (originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1') {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    // 3. Izinkan IP lokal/private network (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    const privateIpPattern = /^(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})$/;
+    if (privateIpPattern.test(originUrl.hostname)) {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    // 4. Periksa whitelist dari .env (CORS_WHITELIST)
+    if (isOriginWhitelisted(origin)) {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    // 5. Periksa apakah origin terdaftar di cached remote_nodes
+    if (cachedNodeUrls.some(url => {
+      if (!url) return false;
+      const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+      return origin === cleanUrl || origin.startsWith(cleanUrl + '/');
+    })) {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    // Jika bukan origin yang diizinkan untuk CORS, cukup tolak CORS tanpa melempar Error 500
+    callback(null, { origin: false });
+  } catch (err) {
+    // Jika format URL origin tidak valid, tolak tanpa melempar Error 500
+    callback(null, { origin: false });
+  }
 };
 
-app.use(cors(corsOptions));
+app.use(cors(corsOptionsDelegate));
 
 // Middleware dasar
 app.use(express.json());
