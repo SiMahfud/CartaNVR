@@ -1,6 +1,7 @@
 const http = require('http');
 const app = require('./app');
 const setupWizard = require('./lib/setup-wizard');
+const { listenWithRetry } = require('./lib/port-utils');
 
 let httpServer = null;
 
@@ -98,31 +99,24 @@ async function initialize() {
 
   httpServer = server;
 
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`[SERVER] Port ${PORT} is already in use. Retrying in 1s...`);
-      setTimeout(() => {
-        server.close();
-        server.listen(PORT);
-      }, 1000);
-    } else {
-      console.error(`[SERVER] Server error:`, err);
-    }
-  });
+  await listenWithRetry(server, PORT, {
+    label: 'SERVER',
+    maxRetries: 3,
+    retryDelayMs: 2000,
+    onListening: () => {
+      logger.log('general', `Server is running on http://127.0.0.1:${PORT}`);
 
-  server.listen(PORT, () => {
-    logger.log('general', `Server is running on http://127.0.0.1:${PORT}`);
+      // Start discovery advertisement
+      try {
+        const discovery = require('./lib/discovery');
+        discovery.startAdvertising(process.env.NVR_NAME || 'My NVR', PORT);
+      } catch (err) {
+        console.error('Failed to start discovery advertisement:', err);
+      }
 
-    // Start discovery advertisement
-    try {
-      const discovery = require('./lib/discovery');
-      discovery.startAdvertising(process.env.NVR_NAME || 'My NVR', PORT);
-    } catch (err) {
-      console.error('Failed to start discovery advertisement:', err);
-    }
-
-    // Pindahkan start recording ke sini agar admin user sudah siap
-    recorder.startAllRecordings();
+      // Pindahkan start recording ke sini agar admin user sudah siap
+      recorder.startAllRecordings();
+    },
   });
 }
 
