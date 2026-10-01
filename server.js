@@ -155,4 +155,27 @@ function gracefulShutdown(signal) {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
+// PM2 on Windows doesn't reliably send SIGINT/SIGTERM.
+// It sends a 'shutdown' message instead.
+process.on('message', (msg) => {
+  if (msg === 'shutdown') {
+    gracefulShutdown('PM2-shutdown');
+  }
+});
+
+// Fallback: force-kill child processes on exit if graceful shutdown didn't run
+process.on('exit', () => {
+  try {
+    const go2rtcManager = require('./lib/go2rtc-manager');
+    go2rtcManager.forceKill && go2rtcManager.forceKill();
+  } catch { /* ignore */ }
+  try {
+    const streamRelay = require('./lib/stream-relay');
+    if (streamRelay.server) {
+      streamRelay.server.close();
+      streamRelay.server = null;
+    }
+  } catch { /* ignore */ }
+});
+
 initialize();

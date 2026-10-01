@@ -307,4 +307,40 @@ router.get('/browse', isAuthenticated, async (req, res) => {
   }
 });
 
+// Create a new directory
+router.post('/browse/mkdir', isAuthenticated, async (req, res) => {
+  const { parentPath, folderName } = req.body;
+
+  if (!parentPath || !folderName) {
+    return res.status(400).json({ error: 'parentPath and folderName are required' });
+  }
+
+  // Sanitize folder name - prevent path traversal
+  const sanitizedName = folderName.replace(/[\/\\:*?"<>|]/g, '').trim();
+  if (!sanitizedName) {
+    return res.status(400).json({ error: 'Invalid folder name' });
+  }
+
+  const newDirPath = path.join(parentPath, sanitizedName);
+
+  // Ensure the new path is still within the parent (prevent traversal via encoded chars)
+  const resolvedParent = path.resolve(parentPath);
+  const resolvedNew = path.resolve(newDirPath);
+  if (!resolvedNew.startsWith(resolvedParent)) {
+    return res.status(400).json({ error: 'Invalid folder path' });
+  }
+
+  try {
+    if (fs.existsSync(newDirPath)) {
+      return res.status(409).json({ error: 'Folder already exists' });
+    }
+    fs.mkdirSync(newDirPath, { recursive: true });
+    console.log(`Created directory: ${newDirPath}`);
+    res.json({ success: true, path: newDirPath });
+  } catch (error) {
+    console.error('Error creating directory:', error);
+    res.status(500).json({ error: 'Failed to create folder: ' + error.message });
+  }
+});
+
 module.exports = router;

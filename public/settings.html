@@ -540,7 +540,23 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Current Path: <strong id="current-path"></strong></p>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <p class="mb-0">Current Path: <strong id="current-path"></strong></p>
+                        <button type="button" class="btn btn-sm btn-outline-success" id="new-folder-toggle-btn" title="New Folder">
+                            <i class="bi bi-folder-plus"></i> New Folder
+                        </button>
+                    </div>
+                    <div class="input-group mb-3" id="new-folder-form" style="display: none;">
+                        <span class="input-group-text"><i class="bi bi-folder-plus"></i></span>
+                        <input type="text" class="form-control" id="new-folder-name" placeholder="Folder name..." autocomplete="off">
+                        <button type="button" class="btn btn-success" id="create-folder-btn">
+                            <i class="bi bi-check-lg"></i> Create
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="cancel-folder-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="alert alert-danger mb-2" id="new-folder-error" style="display: none;"></div>
                     <div class="list-group" id="directory-list"></div>
                 </div>
                 <div class="modal-footer">
@@ -915,6 +931,78 @@
                 }
                 dirModal.hide();
             });
+
+            // --- New Folder Logic ---
+            const newFolderToggleBtn = document.getElementById('new-folder-toggle-btn');
+            const newFolderForm = document.getElementById('new-folder-form');
+            const newFolderNameInput = document.getElementById('new-folder-name');
+            const createFolderBtn = document.getElementById('create-folder-btn');
+            const cancelFolderBtn = document.getElementById('cancel-folder-btn');
+            const newFolderError = document.getElementById('new-folder-error');
+
+            const showNewFolderForm = () => {
+                newFolderForm.style.display = 'flex';
+                newFolderToggleBtn.style.display = 'none';
+                newFolderError.style.display = 'none';
+                newFolderNameInput.value = '';
+                newFolderNameInput.focus();
+            };
+
+            const hideNewFolderForm = () => {
+                newFolderForm.style.display = 'none';
+                newFolderToggleBtn.style.display = '';
+                newFolderError.style.display = 'none';
+                newFolderNameInput.value = '';
+            };
+
+            const createNewFolder = async () => {
+                const folderName = newFolderNameInput.value.trim();
+                if (!folderName) {
+                    newFolderError.textContent = 'Please enter a folder name.';
+                    newFolderError.style.display = 'block';
+                    return;
+                }
+                if (!currentBrowserPath || currentBrowserPath === 'Computer') {
+                    newFolderError.textContent = 'Please navigate to a directory first.';
+                    newFolderError.style.display = 'block';
+                    return;
+                }
+                try {
+                    createFolderBtn.disabled = true;
+                    const response = await fetch('/api/browse/mkdir', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ parentPath: currentBrowserPath, folderName })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to create folder');
+                    }
+                    hideNewFolderForm();
+                    // Refresh directory listing and navigate into the new folder
+                    await loadDirectories(data.path);
+                } catch (error) {
+                    newFolderError.textContent = error.message;
+                    newFolderError.style.display = 'block';
+                } finally {
+                    createFolderBtn.disabled = false;
+                }
+            };
+
+            newFolderToggleBtn.addEventListener('click', showNewFolderForm);
+            cancelFolderBtn.addEventListener('click', hideNewFolderForm);
+            createFolderBtn.addEventListener('click', createNewFolder);
+            newFolderNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    createNewFolder();
+                } else if (e.key === 'Escape') {
+                    hideNewFolderForm();
+                }
+            });
+
+            // Hide the new folder form when the modal is hidden
+            document.getElementById('directory-browser-modal').addEventListener('hidden.bs.modal', hideNewFolderForm);
 
             // --- General Settings Form Logic ---
             const loadGeneralSettings = async () => {
