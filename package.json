@@ -5,7 +5,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "start:pm2": "node start.js",
+    "pm2:start": "node start.js",
+    "pm2:stop": "node start.js stop",
+    "pm2:restart": "node start.js restart",
+    "pm2:logs": "node start.js logs",
+    "pm2:status": "node start.js status",
+    "pm2:delete": "node start.js delete",
     "test": "node --test test/*.test.js"
   },
   "keywords": [],

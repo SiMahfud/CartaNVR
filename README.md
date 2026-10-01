@@ -15,11 +15,30 @@ Setting up Super Simpel NVR is designed to be as automated as possible. Follow t
     ```bash
     npm install
     ```
-3.  **Launch the Setup Wizard:**
-    Simply run the start command. If no configuration is found, the system will automatically launch the interactive setup.
+3.  **Menjalankan Aplikasi:**
+
+    **Opsi A: Menggunakan PM2 (Sangat Disarankan untuk Produksi / Background):**
+    Aplikasi ini dilengkapi pengelola proses PM2 dengan pembersihan port otomatis dan restart recovery:
+    ```bash
+    # Menjalankan NVR via PM2
+    npm run pm2:start
+
+    # Memeriksa status proses dan ketersediaan port
+    npm run pm2:status
+
+    # Memantau logs secara real-time
+    npm run pm2:logs
+
+    # Menghentikan NVR
+    npm run pm2:stop
+    ```
+    *Atau gunakan skrip mandiri: `node start.js [status|logs|restart|stop]`*
+
+    **Opsi B: Menjalankan Langsung (Mode Development):**
     ```bash
     npm start
     ```
+    Jika belum ada berkas `.env`, wizard interaktif akan otomatis memandu konfigurasi database Anda.
 
 ## Database Configuration
 

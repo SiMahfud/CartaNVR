@@ -1,216 +1,339 @@
-# Dokumentasi Sistem NVR (Network Video Recorder)
+# Dokumentasi Sistem CartaNVR (Super Simpel NVR)
 
-Dokumen ini memberikan penjelasan mendalam tentang arsitektur, fungsionalitas, dan cara kerja aplikasi NVR ini.
+Dokumen ini memberikan penjelasan mendalam tentang arsitektur, fungsionalitas, konfigurasi, dan panduan pengoperasian aplikasi CartaNVR.
+
+---
 
 ## 1. Gambaran Umum
 
-Aplikasi ini adalah sebuah **Network Video Recorder (NVR)** sederhana yang dirancang untuk:
-- Menemukan dan mengelola kamera IP yang kompatibel dengan protokol ONVIF di jaringan lokal.
-- Merekam video dari stream RTSP (Real-Time Streaming Protocol) kamera secara terus-menerus.
-- Menyediakan antarmuka web untuk melihat siaran langsung (live view) dari kamera.
-- Mengelola penyimpanan rekaman secara otomatis untuk mencegah kehabisan ruang disk.
-- Menyediakan fitur pemutaran ulang (playback) untuk rekaman video.
+**CartaNVR** adalah Network Video Recorder (NVR) mandiri yang tangguh, efisien, dan fleksibel, dibangun menggunakan ekosistem Node.js:
+- **Penemuan Kamera Otomatis**: Mendukung pemindaian IP otomatis via protokol ONVIF serta penambahan stream RTSP manual.
+- **Streaming Multi-Protokol (Ultra-Low Latency)**: Mendukung WebRTC dan RTSP via go2rtc proxy terintegrasi, serta JSMpeg via WebSocket relay.
+- **Perekaman Berkelanjutan & Handal**: Perekaman otomatis stream CCTV ke berkas MP4 terfragmentasi dengan proses *faststart remux* otomatis agar dapat diputar langsung di web.
+- **Manajemen Penyimpanan Otomatis**: Pemantauan kapasitas hard disk secara berkala, penghapusan rekaman tertua otomatis saat kuota tercapai, dan rekonsiliasi data berkas fisik dengan database.
+- **Fleksibilitas Database**: Mendukung SQLite (tanpa konfigurasi tambahan) dan MySQL / MariaDB (untuk performa tinggi dan multi-server) lengkap dengan wizard instalasi interaktif.
+- **Dukungan Federasi & Penemuan Jaringan**: Mendukung pengumuman mDNS/Bonjour otomatis di jaringan lokal dan sinkronisasi lintas simpul (remote nodes).
+- **Proses Supervisor Terintegrasi (PM2)**: Dikelola secara aman dengan PM2 melalui `ecosystem.config.js` dan skrip pembantu `start.js` yang dilengkapi pembersihan port *zombie* otomatis dan *graceful shutdown*.
 
-Aplikasi ini cocok untuk penggunaan skala kecil hingga menengah yang membutuhkan solusi perekaman CCTV yang efisien dan dapat diakses melalui web.
+---
 
 ## 2. Arsitektur Sistem
 
-Sistem ini dibangun di atas beberapa komponen utama yang bekerja sama untuk menyediakan fungsionalitas NVR yang lengkap.
+Sistem ini terdiri dari beberapa lapisan komponen yang saling terhubung:
 
-![Diagram Arsitektur](link-ke-diagram-jika-ada.png) *(Placeholder untuk diagram arsitektur)*
+```mermaid
+graph TD
+    Client[Browser / Klien Web] -->|HTTP / HTTPS: Port 3000| Express[Express Web Server & API]
+    Client -->|WebSocket / WebRTC: Port 1985/8556| Go2RTC[go2rtc Streaming Proxy]
+    Client -->|WebSocket JSMpeg: Port 3000 / 9999| StreamRelay[JSMpeg Stream Relay]
+    
+    subgraph Core Server [Node.js Runtime]
+        Express --> Auth[Passport Auth & Session]
+        Express --> APIRoutes[REST API Routes]
+        Express --> Discovery[mDNS Bonjour Discovery]
+        APIRoutes --> DB[(Database: SQLite / MySQL)]
+        
+        Supervisor[PM2 & Port Utils] -.->|Mengelola Siklus Hidup| Express
+        Supervisor -.->|Auto Free Port & Shutdown| Go2RTC
+    end
+    
+    subgraph Video Engine
+        Go2RTC -->|RTSP Pull| IPCams[IP Camera RTSP Stream]
+        FFmpegRec[FFmpeg Recording Processes] -->|RTSP Pull| IPCams
+        FFmpegRec -->|Write Segments| Storage[Local Recordings Storage]
+        Watcher[Chokidar File Watcher] -->|Deteksi Berkas Baru| PostProc[Post Processor: Faststart Remux]
+        PostProc -->|Update Metadata| DB
+        StorageService[Storage Cleanup Service] -->|Rotasi File Lama| Storage
+    end
+```
 
 ### Komponen Utama:
 
-- **Backend (Aplikasi Server)**:
-  - **Framework**: Node.js dengan Express.js.
-  - **Fungsi**: Bertindak sebagai otak dari aplikasi, menangani logika bisnis, melayani halaman web, menyediakan API, dan mengelola proses perekaman.
-  - **File Utama**: `server.js`
+1. **Backend Server (`server.js` & `app.js`)**:
+   - Menggunakan Express.js, menangani rute halaman web, autentikasi session pengguna, API RESTful untuk kamera, rekaman, konfigurasi sistem, dan integrasi WebSocket.
+2. **Streaming Gateway (`go2rtc`)**:
+   - Dikelola otomatis oleh `lib/go2rtc-manager.js`. Mengambil stream RTSP kamera dan menyajikannya ke klien dalam format WebRTC ultra-rendah latensi (< 200ms) atau RTSP/MSE.
+3. **Stream Relay JSMpeg (`lib/stream-relay.js`)**:
+   - Menerima input stream MPEG1 dari FFmpeg via port HTTP `9999` dan menyiarkannya via WebSocket ke browser untuk pemutar JSMpeg.
+4. **Modul Perekaman (`recorder.js` & `lib/ffmpeg-manager.js`)**:
+   - Menjalankan dan memantau proses *spawn* FFmpeg untuk setiap kamera aktif, memecah rekaman ke dalam segmen MP4 berkala, dengan mekanisme *watchdog* dan *exponential backoff* jika kamera offline.
+5. **Post-Processing (`lib/post-processor.js`)**:
+   - Menggunakan antrean pemrosesan paralel (*concurrency queue*) untuk memindahkan `moov atom` ke awal berkas MP4 (*faststart*), sehingga berkas dapat langsung di-seek di browser tanpa harus mengunduh keseluruhan berkas.
+6. **Lapisan Database (`lib/database.js`)**:
+   - Menyediakan antarmuka terpadu (abstraction layer) yang mendukung SQLite3 dan MySQL/MariaDB.
+7. **Proses Supervisor & Port Management (`ecosystem.config.js` & `lib/port-utils.js`)**:
+   - Mengatur lifecycle aplikasi di bawah PM2, mengeliminasi risiko *crash loop* akibat *port conflict* (EADDRINUSE) di sistem Windows.
 
-- **Frontend (Antarmuka Pengguna)**:
-  - **Teknologi**: HTML, CSS, dan JavaScript vanilla, dengan bantuan Bootstrap untuk styling.
-  - **Fungsi**: Menyediakan antarmuka web yang interaktif bagi pengguna untuk login, mengelola kamera, dan melihat video.
-  - **File Utama**: `public/dashboard.html`, `public/manage-cameras.html`, dll.
+---
 
-- **Database**:
-  - **Sistem**: SQLite 3.
-  - **Fungsi**: Menyimpan data persisten seperti daftar pengguna, konfigurasi kamera, dan metadata file rekaman.
-  - **File Utama**: `lib/database.js`, `cctv.db` (file database).
+## 3. Alokasi Port dan Jaringan
 
-- **Modul Perekaman (Recorder)**:
-  - **Dependensi Inti**: **FFmpeg**.
-  - **Fungsi**: Proses latar belakang yang bertanggung jawab untuk mengambil stream RTSP dari kamera dan menyimpannya ke dalam file video MP4. Modul ini juga membuat segmen HLS (HTTP Live Streaming) untuk keperluan live view.
-  - **File Utama**: `recorder.js`.
+Secara default, CartaNVR menggunakan alokasi port berikut:
 
-- **Penyimpanan (Storage)**:
-  - **Jenis**: Sistem file lokal.
-  - **Fungsi**: Menyimpan file rekaman video dalam format MP4 di dalam direktori `recordings/`.
-  - **Manajemen**: Ruang penyimpanan dikelola secara otomatis oleh `recorder.js` untuk menghapus rekaman tertua jika kapasitas maksimum terlampaui.
+| Port | Protokol | Deskripsi | Konfigurasi |
+| :--- | :--- | :--- | :--- |
+| **3000** | HTTP / WS | Web UI, REST API, WebSocket Client | `PORT` di `.env` (default: 3000) |
+| **9999** | HTTP (Local) | JSMpeg Relay Server (Input FFmpeg) | Internal `lib/stream-relay.js` |
+| **1985** / 1984 | HTTP | go2rtc REST API & Web Dashboard | `GO2RTC_API_PORT` di `.env` |
+| **8556** / 8555 | UDP/TCP | go2rtc WebRTC Signaling & Media | `GO2RTC_WEBRTC_PORT` di `.env` |
+| **8564** / 8554 | TCP | go2rtc RTSP Re-streaming Server | `GO2RTC_RTSP_PORT` di `.env` |
 
-## 3. Detail Backend
+> [!NOTE]
+> Pada sistem operasi Windows di mana port sering tertahan oleh proses *zombie* setelah restart mendadak, pustaka [port-utils.js](file:///f:/nvr/lib/port-utils.js) dan skrip [start.js](file:///f:/nvr/start.js) akan otomatis mendeteksi dan membebaskan port-port tersebut sebelum server melakukan `listen`.
 
-Backend adalah komponen inti yang menjalankan seluruh logika aplikasi.
+---
 
-### `server.js`
-Ini adalah titik masuk (entry point) utama dari aplikasi Node.js. Tugas-tugas utamanya meliputi:
-- **Inisialisasi Server**: Membuat server Express dan mengaitkannya dengan modul `http`.
-- **Middleware**: Menggunakan middleware penting seperti `express.json()` untuk parsing body JSON, `express.static()` untuk menyajikan file frontend, dan `express-session` untuk manajemen sesi.
-- **Autentikasi**: Mengintegrasikan `passport.js` dengan strategi `passport-local` untuk menangani login pengguna. Sesi pengguna disimpan dalam database SQLite (`connect-sqlite3`).
-- **Routing**: Mendefinisikan semua rute (routes) aplikasi, yang terbagi menjadi dua kategori:
-  - **Rute Halaman**: Menyajikan file HTML untuk halaman utama, dashboard, manajemen kamera, dan playback.
-  - **Rute API (`/api/`)**: Menyediakan endpoint RESTful untuk operasi CRUD (Create, Read, Update, Delete) pada kamera, memicu pemindaian jaringan, dan mengambil data rekaman. Semua rute API dilindungi dan memerlukan autentikasi.
-- **Inisialisasi Aplikasi**: Memastikan pengguna admin default ada di database saat pertama kali dijalankan dan memanggil `recorder.js` untuk memulai semua proses perekaman.
+## 4. Panduan Menjalankan dengan PM2
 
-### `lib/database.js`
-Modul ini bertanggung jawab atas semua interaksi dengan database SQLite (`cctv.db`).
-- **Skema Database**: Saat pertama kali dijalankan, modul ini membuat tiga tabel utama jika belum ada:
-  - `users`: Menyimpan informasi login pengguna (username, password yang di-hash dengan bcrypt).
-  - `cameras`: Menyimpan konfigurasi setiap kamera (nama, alamat IP, URL RTSP).
-  - `recordings`: Menyimpan metadata untuk setiap segmen video yang direkam (path file, timestamp, durasi), dengan relasi ke tabel `cameras`.
-- **Fungsi Helper**: Mengekspor serangkaian fungsi berbasis Promise untuk melakukan operasi database secara aman dan terstruktur, seperti `findUserByUsername`, `getAllCameras`, `addRecording`, dll.
+Aplikasi ini telah dioptimalkan agar berjalan stabil di latar belakang menggunakan **PM2**. Tersedia skrip pembantu [start.js](file:///f:/nvr/start.js) dan berkas konfigurasi [ecosystem.config.js](file:///f:/nvr/ecosystem.config.js).
 
-### `lib/onvif-scanner.js`
-Modul ini menyediakan fungsionalitas untuk menemukan kamera IP di jaringan.
-- **Parsing IP Range**: Mampu mengurai input dalam berbagai format (IP tunggal, rentang IP seperti `192.168.1.10-20`, atau notasi CIDR seperti `192.168.1.0/24`).
-- **Penemuan ONVIF**: Menggunakan library `node-onvif` untuk mencoba terhubung ke setiap alamat IP dalam jangkauan. Jika perangkat merespons dan berhasil diinisialisasi sebagai perangkat ONVIF, perangkat tersebut akan ditambahkan ke daftar hasil.
+### Perintah Cepat via npm
 
-### `recorder.js`
-Ini adalah modul yang paling kompleks dan krusial untuk fungsionalitas NVR. Modul ini berjalan sebagai layanan latar belakang yang dikelola oleh `server.js`.
-- **Proses Perekaman**:
-  - Untuk setiap kamera yang ada di database, `recorder.js` akan membuat (spawn) proses **FFmpeg** baru.
-  - Proses FFmpeg ini dikonfigurasi untuk melakukan dua hal secara bersamaan:
-    1.  **Merekam ke File**: Mengambil stream RTSP dari kamera dan menyimpannya sebagai segmen file `.mp4` (misalnya, setiap 3 menit). File-file ini disimpan di direktori `recordings/cam_{id}/`.
-    2.  **Membuat Stream HLS**: Menghasilkan stream HLS (file `.m3u8` dan segmen `.ts`) secara real-time. Stream ini disimpan di `public/hls/cam_{id}/` dan digunakan oleh frontend untuk menyajikan siaran langsung.
-- **Manajemen Proses FFmpeg**:
-  - Memantau setiap proses FFmpeg. Jika sebuah proses gagal (misalnya, koneksi ke kamera terputus), `recorder.js` akan secara otomatis mencoba me-restart proses tersebut dengan strategi *exponential backoff* untuk menghindari penumpukan error.
-- **Post-Processing**:
-  - Menggunakan `chokidar` untuk memantau direktori rekaman. Ketika file segmen `.mp4` baru selesai ditulis, modul ini akan:
-    1.  Menjalankan `ffmpeg` lagi pada file tersebut untuk memindahkan `moov atom` ke awal file (proses `faststart`). Ini penting untuk pemutaran video yang efisien melalui web.
-    2.  Setelah `faststart` berhasil, ia akan mengambil durasi video dan menambahkan entri metadata ke tabel `recordings` di database.
-- **Manajemen Penyimpanan (Cleanup)**:
-  - Secara berkala (misalnya, setiap 5 menit), modul ini akan memeriksa total ukuran direktori `recordings/`.
-  - Jika total ukuran melebihi batas yang ditentukan (`MAX_STORAGE`), ia akan menghapus file rekaman tertua (beserta entri databasenya) hingga total ukuran kembali di bawah batas.
-- **Sinkronisasi**:
-  - Saat startup, melakukan sinkronisasi satu kali untuk memastikan semua file `.mp4` yang ada di disk terdaftar di database.
-  - Secara berkala, memeriksa apakah ada entri di database yang file fisiknya sudah tidak ada, lalu membersihkannya.
+Gunakan perintah npm berikut dari direktori root proyek:
 
-## 4. Detail Frontend
+```bash
+# Menjalankan atau restart NVR dengan PM2 (disertai pembersihan port otomatis)
+npm run pm2:start
 
-Antarmuka pengguna (frontend) dibangun dengan HTML, CSS, dan JavaScript sisi klien untuk memberikan pengalaman yang responsif dan efisien.
+# Melihat status NVR, penggunaan memori, restart count, dan status port
+npm run pm2:status
 
-### `public/dashboard.html`
-Ini adalah halaman utama tempat pengguna melihat semua siaran langsung kamera.
-- **Grid Kamera Dinamis**: Saat halaman dimuat, ia akan memanggil API `/api/cameras` untuk mendapatkan daftar semua kamera yang terkonfigurasi. Berdasarkan respons ini, ia secara dinamis membuat "kartu" untuk setiap kamera dan menampilkannya dalam sebuah grid.
-- **Lazy Loading (Pemuatan Malas)**: Untuk menghemat sumber daya (CPU dan bandwidth), pemutar video tidak langsung dimuat untuk semua kamera. Dashboard menggunakan `IntersectionObserver` API untuk mendeteksi kartu kamera mana yang sedang terlihat di layar pengguna. Pemutar video hanya akan dimulai untuk kamera yang terlihat.
-- **Manajemen Player dengan Iframe**: Setiap pemutar video dimuat di dalam sebuah `<iframe>` yang menunjuk ke `hls-player.html`. Ini mengisolasi setiap pemutar dan mencegah masalah pada satu pemutar memengaruhi yang lain.
-- **Komunikasi via `postMessage`**: Dashboard berkomunikasi dengan setiap iframe menggunakan `window.postMessage()` untuk mengirim URL HLS yang harus diputar. Ia juga menerima pesan kembali dari iframe, misalnya ketika resolusi video terdeteksi.
-- **Optimalisasi Kinerja**:
-  - **Page Visibility API**: Dashboard menggunakan API ini untuk mendeteksi jika pengguna beralih ke tab lain atau meminimalkan browser. Jika halaman menjadi tidak terlihat, semua pemutar video akan dihentikan. Mereka akan dimulai kembali secara otomatis ketika halaman kembali terlihat.
-  - **Dark Mode**: Menyediakan opsi untuk beralih antara tema terang dan gelap, dengan preferensi disimpan di *cookie*.
+# Melihat log streaming dan perekaman secara real-time
+npm run pm2:logs
 
-### `public/hls-player.html`
-File ini adalah pemutar video HLS yang mandiri dan dapat disematkan.
-- **Tujuan**: Dirancang khusus untuk dimuat di dalam `<iframe>` oleh dashboard. Tanggung jawab utamanya adalah menerima URL HLS dan memutarnya.
-- **Dukungan HLS**: Menggunakan pustaka `hls.js` (dari CDN) untuk pemutaran di browser yang tidak mendukung HLS secara native (seperti Chrome, Firefox). Untuk browser yang mendukungnya (seperti Safari), ia akan menggunakan elemen `<video>` HTML5 standar.
-- **Pelaporan Resolusi**: Setelah video mulai diputar dan metadatanya tersedia, skrip di halaman ini akan mendeteksi resolusi asli video (`videoWidth` dan `videoHeight`) dan mengirimkan informasi ini kembali ke `dashboard.html` induknya. Ini memungkinkan dashboard untuk menyesuaikan rasio aspek wadah video agar sesuai dengan sumbernya, menghindari distorsi gambar.
+# Me-restart NVR dengan aman
+npm run pm2:restart
 
-## 5. Panduan Instalasi & Konfigurasi
+# Menghentikan NVR
+npm run pm2:stop
 
-Berikut adalah langkah-langkah untuk menginstal, mengkonfigurasi, dan menjalankan aplikasi NVR di lingkungan lokal.
+# Menghapus NVR dari daftar proses PM2
+npm run pm2:delete
+```
 
-### Prasyarat
-1.  **Node.js**: Pastikan Node.js (versi 14.x atau lebih tinggi) terinstal di sistem Anda.
-2.  **npm**: Manajer paket Node.js, biasanya terinstal bersama Node.js.
-3.  **FFmpeg**: Ini adalah dependensi eksternal yang **wajib** ada. Aplikasi memanggil `ffmpeg` dari baris perintah. Pastikan `ffmpeg` telah terinstal di sistem Anda dan path ke executable-nya telah ditambahkan ke variabel lingkungan `PATH` sistem Anda.
+---
 
-### Langkah-langkah Instalasi
-1.  **Kloning Repositori**:
-    ```bash
-    git clone https://github.com/v2l2/cctv.git
-    cd cctv
-    ```
+### Menggunakan Skrip Pembantu `start.js`
 
-2.  **Instal Dependensi Node.js**:
-    Jalankan perintah berikut di direktori root proyek untuk menginstal semua pustaka yang diperlukan dari `package.json`:
-    ```bash
-    npm install
-    ```
+Skrip `start.js` menyediakan CLI interaktif yang lebih fleksibel:
 
-### Menjalankan Aplikasi
-1.  **Mulai Server**:
-    Gunakan skrip `start` dari `package.json` untuk menjalankan server:
-    ```bash
-    npm start
-    ```
+```bash
+# 1. Menjalankan NVR
+node start.js
+# atau: node start.js start
 
-2.  **Akses Aplikasi**:
-    Setelah server berjalan, Anda akan melihat output di konsol seperti `Server is running on http://localhost:3000`. Buka browser web Anda dan navigasikan ke alamat tersebut.
+# 2. Memeriksa status lengkap (dilengkapi pengecekan status port)
+node start.js status
 
-3.  **Login Awal**:
-    - **Username**: `admin`
-    - **Password**: `smacampurdarat`
+# 3. Menampilkan log langsung
+node start.js logs
 
-    Saat pertama kali dijalankan, aplikasi akan secara otomatis membuat akun administrator default ini.
+# 4. Melakukan restart aman
+node start.js restart
 
-### Konfigurasi Penting
-Sebagian besar konfigurasi kritis berada di dalam file `recorder.js`. Anda dapat mengubah nilai-nilai ini sesuai kebutuhan:
-- `MAX_STORAGE`: Total kapasitas penyimpanan maksimum untuk semua rekaman dalam byte. Contoh: `600 * 1024 * 1024 * 1024` untuk 600 GB.
-- `CLEANUP_INTERVAL_MS`: Seberapa sering (dalam milidetik) proses pembersihan penyimpanan dijalankan.
-- `HLS_TIME_SECONDS`: Durasi setiap segmen video HLS (untuk live view). Nilai yang lebih kecil memberikan latensi yang lebih rendah tetapi menghasilkan lebih banyak file.
-- `FFMPEG_MAX_RETRY`: Berapa kali sistem akan mencoba me-restart proses `ffmpeg` yang gagal sebelum masuk ke periode "cool-off".
+# 5. Menghentikan proses
+node start.js stop
+```
 
-## 6. Panduan Penggunaan
+#### Keunggulan `start.js` dibanding `pm2 start` biasa:
+1. **Otomatis Membersihkan Zombie Ports**: Sebelum menjalankan server, skrip memeriksa port `3000`, `9999`, `1985`, `8556`, dan `8564`. Jika ada proses sisa/macet yang menahan port tersebut, proses akan dihentikan secara paksa (`taskkill /F`).
+2. **Mencegah Crash Loop**: Mencegah insiden restart berulang-ulang akibat bentrok socket (EADDRINUSE).
+3. **Auto PM2 Save**: Otomatis menjalankan `pm2 save` sehingga NVR akan kembali berjalan otomatis saat komputer/server di-reboot.
 
-Berikut adalah alur kerja umum bagi pengguna aplikasi.
+---
 
-1.  **Login**:
-    - Akses aplikasi melalui browser di `http://localhost:3000`.
-    - Masukkan kredensial Anda. Untuk pengguna pertama kali, gunakan `admin` / `smacampurdarat`.
+### Konfigurasi `ecosystem.config.js`
 
-2.  **Mengelola Kamera (`Camera Manager`)**:
-    - Setelah login, navigasikan ke halaman "Camera Manager" melalui menu navigasi.
-    - **Menemukan Kamera Secara Otomatis**:
-      - Masukkan rentang IP jaringan Anda (misalnya, `192.168.1.1-254`) ke dalam kolom "Scan IP Range".
-      - Klik tombol "Scan". Sistem akan mencari perangkat yang kompatibel dengan ONVIF. Hasilnya akan muncul di daftar.
-    - **Menambah Kamera Secara Manual**:
-      - Jika kamera Anda tidak ditemukan atau tidak mendukung ONVIF, Anda dapat menambahkannya secara manual.
-      - Isi nama kamera, alamat IP, dan URL RTSP lengkap di formulir yang tersedia.
-      - Klik "Add Camera".
-    - Kamera yang ditambahkan akan langsung memulai proses perekaman di latar belakang.
+Berkas [ecosystem.config.js](file:///f:/nvr/ecosystem.config.js) dirancang khusus untuk stabilitas di lingkungan Windows:
 
-3.  **Melihat Siaran Langsung (`Dashboard`)**:
-    - Navigasikan ke halaman "Dashboard".
-    - Anda akan melihat grid yang menampilkan siaran langsung dari semua kamera yang telah Anda tambahkan.
-    - Player video hanya akan aktif ketika kartu kamera terlihat di layar untuk menghemat sumber daya.
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: 'nvr',
+      script: 'server.js',
+      cwd: __dirname,
 
-4.  **Memutar Ulang Rekaman (`Playback`)**:
-    - Navigasikan ke halaman "Playback".
-    - Pilih kamera yang ingin Anda lihat rekamannya dari daftar dropdown.
-    - Pilih rentang tanggal dan waktu untuk rekaman yang ingin Anda lihat.
-    - Klik "Load Recordings".
-    - Daftar segmen video yang tersedia akan ditampilkan. Klik pada salah satu segmen untuk memutarnya.
+      // Penanganan restart cerdas
+      restart_delay: 5000,            // Jeda 5 detik antar restart jika terjadi error tak terduga
+      max_restarts: 10,               // Maksimal 10 restart berturut-turut
+      min_uptime: '10s',              // Batas waktu proses dinyatakan stabil
+      exp_backoff_restart_delay: 100, // Exponential backoff
 
-## 7. Struktur Proyek
+      // Penanganan Graceful Shutdown
+      kill_timeout: 15000,            // Waktu 15 detik bagi FFmpeg & go2rtc untuk keluar dengan rapi
+      listen_timeout: 30000,
+      shutdown_with_message: true,    // Mengirim event 'shutdown' yang kompatibel dengan Windows
 
-Berikut adalah ringkasan struktur direktori dan file utama dalam proyek ini.
+      // Penyimpanan Log
+      error_file: path.join(__dirname, 'logs', 'nvr-error.log'),
+      out_file: path.join(__dirname, 'logs', 'nvr-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+
+      // Batasan memori
+      node_args: '--max-old-space-size=512',
+      autorestart: true,
+      watch: false,
+    },
+  ],
+};
+```
+
+---
+
+## 5. Konfigurasi Variabel Lingkungan (`.env`)
+
+Konfigurasi aplikasi disimpan dalam berkas `.env` di direktori utama:
+
+```env
+# ===================================================================
+# Database Configuration
+# ===================================================================
+# Pilihan: 'sqlite' atau 'mysql'
+DB_TYPE=mysql
+
+# Konfigurasi MySQL (hanya diperlukan jika DB_TYPE=mysql)
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=rahasia_anda
+MYSQL_DATABASE=nvr
+
+# ===================================================================
+# Keamanan & Autentikasi
+# ===================================================================
+# Secret key untuk enkripsi session cookie (wajib diganti di produksi)
+SESSION_SECRET=kunci-rahasia-yang-sangat-panjang-dan-unik
+
+# Password default akun 'admin' saat inisialisasi awal
+DEFAULT_ADMIN_PASSWORD=smacampurdarat
+
+# CORS Whitelist (domain yang diizinkan mengakses API / stream)
+# Mendukung tanda bintang wildcard, contoh: *.domainanda.com
+CORS_WHITELIST=*.sman1campurdarat.sch.id
+
+# ===================================================================
+# Alokasi Port Streaming go2rtc
+# ===================================================================
+# Ubah jika terdapat bentrok dengan aplikasi lain di server yang sama
+GO2RTC_API_PORT=1985
+GO2RTC_WEBRTC_PORT=8556
+GO2RTC_RTSP_PORT=8564
+```
+
+---
+
+## 6. Detail Komponen & Modul Backend
+
+Berikut adalah rincian peran masing-masing berkas di dalam direktori `lib/` dan `routes/`:
+
+### Direktori `lib/`
+
+- **[config.js](file:///f:/nvr/lib/config.js)**: Pusat konfigurasi aplikasi. Memuat `.env`, berkas `config.json`, nilai default sistem, dan mendukung pembaruan dinamis dari pengaturan database (`syncWithDatabase`).
+- **[database.js](file:///f:/nvr/lib/database.js)**: Abstraksi layer database. Mendukung SQLite dan MySQL secara transparan untuk entitas kamera, rekaman, pengguna, remote nodes, dan pengaturan sistem.
+- **[port-utils.js](file:///f:/nvr/lib/port-utils.js)**: Modul deteksi proses port via `netstat`/`lsof`, pembunuh PID otomatis, dan pembungkus `listenWithRetry` untuk server HTTP dan relay.
+- **[go2rtc-manager.js](file:///f:/nvr/lib/go2rtc-manager.js)**: Pengendali siklus hidup *binary* go2rtc. Menghasilkan berkas YAML konfigurasi dinamis, mendaftarkan stream kamera ke API go2rtc, dan melakukan sinkronisasi berkala stream yang hilang.
+- **[stream-relay.js](file:///f:/nvr/lib/stream-relay.js)**: Server HTTP dan WebSocket internal untuk menyalurkan stream MPEG1 (JSMpeg) ke antarmuka web.
+- **[ffmpeg-manager.js](file:///f:/nvr/lib/ffmpeg-manager.js)**: Pengelola proses perekaman FFmpeg per kamera. Menangani pembuatan berkas segmen MP4 dan playlist HLS/DASH.
+- **[post-processor.js](file:///f:/nvr/lib/post-processor.js)**: Pemrosesan lanjutan berkas video MP4 baru untuk memindahkan metadata `moov atom` (*faststart*) dengan sistem antrean berantai (*concurrency queue*).
+- **[storage.js](file:///f:/nvr/lib/storage.js)**: Pengatur penyimpanan berkas rekaman, pemantauan batas kapasitas penyimpanan, sinkronisasi berkas fisik dengan database, dan pembersihan berkas usang.
+- **[onvif-scanner.js](file:///f:/nvr/lib/onvif-scanner.js)**: Pemindai jaringan lokal untuk menemukan kamera IP yang mendukung protokol ONVIF Profile S/T.
+- **[setup-wizard.js](file:///f:/nvr/lib/setup-wizard.js)**: Wizard interaktif konsol CLI yang memandu pengguna mengonfigurasi database saat pertama kali aplikasi dijalankan tanpa `.env`.
+- **[discovery.js](file:///f:/nvr/lib/discovery.js)**: Layanan Bonjour/mDNS untuk mengiklankan keberadaan NVR di jaringan lokal agar mudah ditemukan oleh aplikasi klien.
+- **[healthcheck.js](file:///f:/nvr/lib/healthcheck.js)**: Endpoint utilitas untuk memeriksa kesehatan proses, penggunaan RAM, konektivitas database, dan status perekam.
+- **[logger.js](file:///f:/nvr/lib/logger.js)**: Sistem pencatatan log modular (kategori: recorder, storage, general, api) dengan rotasi berkas otomatis.
+
+### Direktori `routes/`
+
+- **[routes/auth.js](file:///f:/nvr/routes/auth.js)**: Menangani alur login, logout, dan status session pengguna via Passport.js.
+- **[routes/pages.js](file:///f:/nvr/routes/pages.js)**: Menyajikan berkas HTML utama (Dashboard, Manajemen Kamera, Playback, Settings, System Logs).
+- **[routes/websocket.js](file:///f:/nvr/routes/websocket.js)**: Menangani koneksi WebSocket klien untuk streaming langsung JSMpeg.
+- **[routes/api/cameras.js](file:///f:/nvr/routes/api/cameras.js)**: CRUD konfigurasi kamera, status stream, dan kontrol re-koneksi.
+- **[routes/api/recordings.js](file:///f:/nvr/routes/api/recordings.js)**: Pengambilan daftar berkas rekaman per kamera berdasarkan rentang tanggal/jam dan streaming berkas MP4.
+- **[routes/api/system.js](file:///f:/nvr/routes/api/system.js)**: Informasi statistik CPU, RAM, disk, konfigurasi sistem, dan manajemen remote nodes.
+- **[routes/api/go2rtc.js](file:///f:/nvr/routes/api/go2rtc.js)**: Proxy rute untuk WebRTC offer/answer negotiation ke service go2rtc.
+
+---
+
+## 7. Panduan Pengoperasian Antarmuka Web
+
+1. **Login Awal**:
+   - Buka browser dan kunjungi `http://localhost:3000` (atau IP server Anda).
+   - Masukkan Username `admin` dan Password default `smacampurdarat`.
+   - *Catatan: Sangat disarankan untuk segera mengubah password setelah login pertama melalui menu pengaturan.*
+2. **Menambahkan Kamera**:
+   - Masuk ke menu **Camera Manager**.
+   - **Pemindaian Otomatis**: Masukkan subnet IP jaringan (misal: `192.168.1.1-254`), lalu klik **Scan**. Kamera yang mendukung ONVIF akan otomatis terdeteksi.
+   - **Penambahan Manual**: Masukkan nama kamera, alamat IP, dan URL RTSP (contoh: `rtsp://user:pass@192.168.1.50:554/live/ch0`).
+   - Pilih metode streaming: **go2rtc** (WebRTC performa tinggi) atau **JSMpeg**.
+3. **Memantau Live View di Dashboard**:
+   - Halaman **Dashboard** menampilkan grid pemantauan seluruh kamera aktif.
+   - Pemutar video menggunakan *IntersectionObserver* (lazy-loading): pemutar hanya aktif jika kartu kamera berada di area pandang layar, sehingga hemat CPU dan bandwidth.
+4. **Playback Rekaman**:
+   - Masuk ke menu **Playback**.
+   - Pilih kamera dan tentukan rentang tanggal/waktu yang diinginkan.
+   - Klik segmen video untuk langsung memutar rekaman. Bilah navigasi memungkinkan pencarian waktu secara cepat berkat proses *faststart*.
+
+---
+
+## 8. Struktur Direktori Proyek
 
 ```
-.
-├── lib/
-│   ├── database.js         # Modul untuk interaksi database SQLite.
-│   └── onvif-scanner.js    # Logika untuk penemuan kamera ONVIF.
-├── node_modules/           # Dependensi Node.js (dihasilkan oleh npm install).
-├── public/
-│   ├── dashboard.html      # Halaman utama untuk live view.
-│   ├── hls-player.html     # Pemutar HLS yang disematkan.
-│   ├── index.html          # Halaman login.
-│   ├── manage-cameras.html # Halaman untuk mengelola kamera.
-│   ├── playback.html       # Halaman untuk melihat rekaman.
-│   └── hls/                # Direktori untuk file stream HLS (dihasilkan oleh ffmpeg).
-├── recordings/             # Direktori untuk menyimpan file rekaman MP4 (dihasilkan oleh ffmpeg).
-├── cctv.db                 # File database SQLite (dihasilkan saat pertama kali dijalankan).
-├── DOCUMENTATION.md        # File dokumentasi ini.
-├── package.json            # Mendefinisikan metadata proyek dan dependensi.
-├── package-lock.json       # Mengunci versi dependensi.
-├── recorder.js             # Skrip utama untuk mengelola perekaman FFmpeg.
-└── server.js               # Titik masuk utama aplikasi Express.js.
+f:\nvr\
+├── .env                       # Variabel lingkungan & konfigurasi kredensial
+├── .gitignore                 # Konfigurasi pengecualian Git
+├── app.js                     # Inisialisasi Express, CORS, middleware, dan session
+├── server.js                  # Entry point utama, HTTP server, graceful shutdown
+├── start.js                   # CLI launcher PM2 & port cleaner otomatis
+├── ecosystem.config.js        # Konfigurasi proses PM2 untuk produksi
+├── recorder.js                # Orkestrasi perekaman kamera & background workers
+├── package.json               # Dependensi & script perintah npm
+├── DOCUMENTATION.md           # Dokumentasi teknis lengkap ini
+├── README.md                  # Panduan ringkas proyek
+│
+├── lib/                       # Modul pustaka inti
+│   ├── config.js              # Loader konfigurasi dinamis
+│   ├── database.js            # Abstraksi database (SQLite / MySQL)
+│   ├── db-events.js           # Event emitter perubahan database
+│   ├── discovery.js           # mDNS / Bonjour advertisement
+│   ├── ffmpeg-manager.js      # Manajemen subproses FFmpeg
+│   ├── go2rtc-manager.js      # Supervisor service go2rtc
+│   ├── healthcheck.js         # Status kesehatan sistem
+│   ├── logger.js              # Sistem logging aplikasi
+│   ├── middleware.js          # Guard autentikasi rute
+│   ├── onvif-scanner.js       # Pemindai kamera ONVIF
+│   ├── passport-config.js     # Strategi login lokal
+│   ├── port-utils.js          # Utilitas port & pembunuh proses zombie
+│   ├── post-processor.js      # Faststart remuxer antrean MP4
+│   ├── setup-wizard.js        # Wizard instalasi database CLI
+│   ├── storage.js             # Manajemen rotasi & pembersihan storage
+│   ├── stream-relay.js        # JSMpeg WebSocket relay
+│   └── utils.js               # Fungsi utilitas pembantu
+│
+├── routes/                    # Definisi rute Express
+│   ├── auth.js                # Rute autentikasi
+│   ├── pages.js               # Rute penyaji halaman HTML
+│   ├── websocket.js           # Rute koneksi WebSocket
+│   └── api/                   # Endpoint RESTful API
+│       ├── cameras.js         # API kamera
+│       ├── go2rtc.js          # API signaling go2rtc WebRTC
+│       ├── maintenance.js     # API pemeliharaan database & berkas
+│       ├── recordings.js      # API berkas rekaman
+│       ├── storages.js        # API kuota penyimpanan
+│       └── system.js          # API diagnostik sistem
+│
+├── public/                    # Aset statis & halaman antarmuka web
+│   ├── dashboard.html         # Tampilan grid live view
+│   ├── manage-cameras.html    # Halaman manajemen kamera
+│   ├── playback.html          # Halaman pemutar rekaman
+│   ├── index.html             # Halaman login
+│   ├── go2rtc-player.html     # Pemutar WebRTC go2rtc mandiri
+│   ├── hls-player.html        # Pemutar HLS mandiri
+│   └── js/ & css/             # Skrip & stylesheet frontend
+│
+├── logs/                      # Berkas log output & error PM2 (diabaikan git)
+│   ├── nvr-out.log
+│   └── nvr-error.log
+│
+└── recordings/                # Direktori penyimpanan rekaman MP4 (per cam_{id})
 ```
