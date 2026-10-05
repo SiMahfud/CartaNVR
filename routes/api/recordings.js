@@ -20,12 +20,36 @@ router.get('/:cameraId/:filename', isAuthenticatedOrFederated, async (req, res) 
         const camId = sanitizeCamId(cameraId.replace('cam_', ''));
         const camera = await database.getCameraById(camId);
 
-        if (!camera || !camera.storage_path) {
-            return res.status(404).send('Camera or storage not found');
+        // If storage_id is provided, use that specific storage for playback
+        // This allows playing old recordings from a previous storage
+        let storagePath = null;
+        if (req.query.storage_id) {
+            const storage = await database.getStorageById(req.query.storage_id);
+            if (storage) {
+                storagePath = storage.path;
+            }
         }
 
-        const camDir = path.join(camera.storage_path, `cam_${camId}`);
-        const filePath = path.join(camDir, filename);
+        // Fallback: use camera's current storage
+        if (!storagePath) {
+            if (!camera || !camera.storage_path) {
+                return res.status(404).send('Camera or storage not found');
+            }
+            storagePath = camera.storage_path;
+        }
+
+        let camDir = path.join(storagePath, `cam_${camId}`);
+        let filePath = path.join(camDir, filename);
+
+        // If not found in specified storage, check camera's current storage as fallback
+        if (!fs.existsSync(filePath) && camera && camera.storage_path && camera.storage_path !== storagePath) {
+            const fallbackCamDir = path.join(camera.storage_path, `cam_${camId}`);
+            const fallbackFilePath = path.join(fallbackCamDir, filename);
+            if (fs.existsSync(fallbackFilePath)) {
+                camDir = fallbackCamDir;
+                filePath = fallbackFilePath;
+            }
+        }
 
         // Double-check resolved path stays within camera directory
         const resolvedPath = path.resolve(filePath);
@@ -45,3 +69,4 @@ router.get('/:cameraId/:filename', isAuthenticatedOrFederated, async (req, res) 
 });
 
 module.exports = router;
+
