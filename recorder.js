@@ -55,7 +55,19 @@ function startDirWatcher(dirPath) {
     lastFilePerDir.set(dirPath, newFile);
   });
 
-  watcher.on('error', (e) => console.error('[WATCHER] Error:', dirPath, e.message));
+  watcher.on('error', (e) => {
+    console.error('[WATCHER] Error:', dirPath, e.message);
+
+    // Jika watcher rusak (ENOSPC/EMFILE), hapus dari Map agar bisa di-recreate
+    // pada siklus FFmpeg restart berikutnya.
+    if (e.code === 'ENOSPC' || e.code === 'EMFILE') {
+      logger.log('recorder', `[WATCHER] Watcher untuk ${dirPath} rusak (${e.code}). Menghapus agar bisa di-recreate.`);
+      watcher.close().catch(() => {});
+      activeWatchers.delete(dirPath);
+      // lastFilePerDir dipertahankan agar tidak kehilangan tracking file terakhir
+    }
+  });
+
   activeWatchers.set(dirPath, watcher);
 }
 
