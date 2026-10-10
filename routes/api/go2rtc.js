@@ -11,7 +11,7 @@
 const express = require('express');
 const http = require('http');
 const router = express.Router();
-const { isAuthenticated } = require('../../lib/middleware');
+const { isAuthenticated, isAuthenticatedOrFederated } = require('../../lib/middleware');
 const go2rtcManager = require('../../lib/go2rtc-manager');
 
 /**
@@ -86,13 +86,13 @@ function proxyToGo2rtc(req, res, targetPath) {
 }
 
 // GET /api/go2rtc/streams — List all streams
-router.get('/streams', isAuthenticated, (req, res) => {
+router.get('/streams', isAuthenticatedOrFederated, (req, res) => {
     proxyToGo2rtc(req, res, '/api/streams');
 });
 
 // POST /api/go2rtc/webrtc — WebRTC SDP exchange
 // Requires parsing application/sdp into string text
-router.post('/webrtc', isAuthenticated, express.text({ type: 'application/sdp' }), (req, res) => {
+router.post('/webrtc', isAuthenticatedOrFederated, express.text({ type: 'application/sdp' }), (req, res) => {
     const src = req.query.src;
     if (!src) return res.status(400).json({ error: 'src parameter required' });
     const query = new URLSearchParams({ src }).toString();
@@ -100,7 +100,7 @@ router.post('/webrtc', isAuthenticated, express.text({ type: 'application/sdp' }
 });
 
 // GET /api/go2rtc/stream.mp4 — MSE stream
-router.get('/stream.mp4', isAuthenticated, (req, res) => {
+router.get('/stream.mp4', isAuthenticatedOrFederated, (req, res) => {
     const src = req.query.src;
     if (!src) return res.status(400).json({ error: 'src parameter required' });
     const query = new URLSearchParams({ src }).toString();
@@ -108,7 +108,7 @@ router.get('/stream.mp4', isAuthenticated, (req, res) => {
 });
 
 // GET /api/go2rtc/stream.m3u8 — HLS playlist
-router.get('/stream.m3u8', isAuthenticated, (req, res) => {
+router.get('/stream.m3u8', isAuthenticatedOrFederated, (req, res) => {
     const src = req.query.src;
     if (!src) return res.status(400).json({ error: 'src parameter required' });
     const query = new URLSearchParams({ src }).toString();
@@ -116,7 +116,7 @@ router.get('/stream.m3u8', isAuthenticated, (req, res) => {
 });
 
 // GET /api/go2rtc/stream.ts — HLS segments
-router.get('/stream.ts', isAuthenticated, (req, res) => {
+router.get('/stream.ts', isAuthenticatedOrFederated, (req, res) => {
     const src = req.query.src;
     if (!src) return res.status(400).json({ error: 'src parameter required' });
     const query = new URLSearchParams(req.query).toString();
@@ -125,7 +125,7 @@ router.get('/stream.ts', isAuthenticated, (req, res) => {
 
 // GET /api/go2rtc/ws — WebSocket proxy for MSE
 // This needs special handling because it's a WebSocket upgrade
-router.get('/status', isAuthenticated, (req, res) => {
+router.get('/status', isAuthenticatedOrFederated, (req, res) => {
     res.json({
         running: go2rtcManager.isRunning(),
         port: go2rtcManager.getApiPort(),

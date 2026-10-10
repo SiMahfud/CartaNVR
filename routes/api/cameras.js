@@ -42,7 +42,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 });
 
 // POST /api/cameras/:id/restart-stream
-router.post('/:id/restart-stream', isAuthenticated, async (req, res) => {
+router.post('/:id/restart-stream', isAuthenticatedOrFederated, async (req, res) => {
   try {
     const cameraId = req.params.id;
     const camera = await database.getCameraById(cameraId);

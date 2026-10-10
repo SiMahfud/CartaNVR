@@ -60,9 +60,17 @@
         const urlParams = new URLSearchParams(window.location.search);
         const camId = urlParams.get('cam');
         const preferredMethod = urlParams.get('method') || 'auto';
+        const apiKey = urlParams.get('api_key') || '';
         const statusEl = document.getElementById('status');
         const video = document.getElementById('video');
         const streamSrc = `cam_${camId}`;
+
+        // Helper: append api_key to a URL if present (for federation auth on remote nodes)
+        function authUrl(url) {
+            if (!apiKey) return url;
+            const sep = url.includes('?') ? '&' : '?';
+            return `${url}${sep}api_key=${encodeURIComponent(apiKey)}`;
+        }
 
         let resolutionSent = false;
 
@@ -169,7 +177,7 @@
             setStatus(`Failed. Retrying in ${remaining}s...`);
             
             // Trigger restream to backend to fix stale connections
-            fetch(`/api/cameras/${camId}/restart-stream`, { method: 'POST' }).catch(console.error);
+            fetch(authUrl(`/api/cameras/${camId}/restart-stream`), { method: 'POST' }).catch(console.error);
 
             const countdown = setInterval(() => {
                 remaining--;
@@ -224,7 +232,7 @@
                     }
                 });
 
-                const response = await fetch(`/api/go2rtc/webrtc?src=${encodeURIComponent(streamSrc)}`, {
+                const response = await fetch(authUrl(`/api/go2rtc/webrtc?src=${encodeURIComponent(streamSrc)}`), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/sdp' },
                     body: pc.localDescription.sdp,
@@ -333,7 +341,7 @@
 
                     ms.addEventListener('sourceopen', async () => {
                         try {
-                            const url = `/api/go2rtc/stream.mp4?src=${encodeURIComponent(streamSrc)}&_t=${Date.now()}`;
+                            const url = authUrl(`/api/go2rtc/stream.mp4?src=${encodeURIComponent(streamSrc)}&_t=${Date.now()}`);
                             const response = await fetch(url);
 
                             if (!response.ok || !response.body) {
@@ -431,7 +439,7 @@
          */
         async function tryHLS() {
             try {
-                const url = `/api/go2rtc/stream.m3u8?src=${encodeURIComponent(streamSrc)}`;
+                const url = authUrl(`/api/go2rtc/stream.m3u8?src=${encodeURIComponent(streamSrc)}`);
 
                 // Check if native HLS is supported (Safari, iOS)
                 if (video.canPlayType('application/vnd.apple.mpegurl')) {

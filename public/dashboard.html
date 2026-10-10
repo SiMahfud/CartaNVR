@@ -394,7 +394,8 @@
                     const playerCacheBuster = `v=${Date.now()}`;
                     const playerPage = camera.stream_method === 'go2rtc' ? `go2rtc-player.html?${playerCacheBuster}&` :
                         camera.stream_method === 'jsmpeg' ? `jsmpeg-player.html?${playerCacheBuster}&` : `dash-player.html?${playerCacheBuster}&`;
-                    iframe.src = `${camera.nodeUrl}/${playerPage}cam=${originalId}${methodParam}`;
+                    const apiKeyParam = camera.nodeApiKey ? `&api_key=${encodeURIComponent(camera.nodeApiKey)}` : '';
+                    iframe.src = `${camera.nodeUrl}/${playerPage}cam=${originalId}${methodParam}${apiKeyParam}`;
                 } else {
                     const playerCacheBuster = `v=${Date.now()}`;
                     const playerPage = camera.stream_method === 'go2rtc' ? `go2rtc-player.html?${playerCacheBuster}&` :
