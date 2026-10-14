@@ -44,7 +44,7 @@ module.exports = {
       merge_logs: true,              // Gabung log dari semua instance
 
       // === Environment ===
-      node_args: '--max-old-space-size=512',
+      node_args: '--max-old-space-size=2048',
       autorestart: true,
       watch: false,                  // Jangan watch, NVR punya file watcher sendiri
 

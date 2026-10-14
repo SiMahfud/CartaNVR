@@ -154,6 +154,23 @@ function cleanupPorts() {
     }
 }
 
+/**
+ * Bersihkan proses ffmpeg dan go2rtc liar / zombie jika ada
+ */
+function cleanupOrphanProcesses() {
+    log('Memeriksa dan membersihkan proses ffmpeg/go2rtc zombie...');
+    try {
+        if (process.platform === 'win32') {
+            exec('taskkill /F /IM ffmpeg.exe /T');
+            exec('taskkill /F /IM go2rtc.exe /T');
+        } else {
+            exec('pkill -9 -f ffmpeg');
+            exec('pkill -9 -f go2rtc');
+        }
+        logOk('Pembersihan proses ffmpeg/go2rtc zombie selesai.');
+    } catch { /* ignore */ }
+}
+
 // ─── Commands ────────────────────────────────────────────────────────
 
 async function cmdStart() {
@@ -192,8 +209,9 @@ async function cmdStart() {
         logOk('Instance lama dihapus.');
     }
 
-    // 4. Bersihkan port zombie
+    // 4. Bersihkan port dan proses zombie
     cleanupPorts();
+    cleanupOrphanProcesses();
 
     // Tunggu sebentar agar OS release port
     await sleep(2000);
@@ -242,15 +260,17 @@ function cmdStop() {
     if (!isProcessRunning(APP_NAME)) {
         logWarn('NVR tidak sedang jalan di PM2.');
         cleanupPorts(); // Tetap bersihkan port zombie
+        cleanupOrphanProcesses();
         return;
     }
 
     exec(`pm2 stop ${APP_NAME}`);
     logOk('NVR dihentikan.');
 
-    // Bersihkan port zombie setelah stop
+    // Bersihkan port dan proses zombie setelah stop
     setTimeout(() => {
         cleanupPorts();
+        cleanupOrphanProcesses();
         exec('pm2 save');
     }, 3000);
 }
@@ -264,12 +284,13 @@ function cmdRestart() {
         return;
     }
 
-    // Stop dulu, bersihkan port, lalu start
+    // Stop dulu, bersihkan port dan proses, lalu start
     exec(`pm2 stop ${APP_NAME}`);
     logInfo('Menunggu proses berhenti...');
 
     setTimeout(() => {
         cleanupPorts();
+        cleanupOrphanProcesses();
         setTimeout(() => {
             exec(`pm2 restart ${APP_NAME}`);
             logOk('NVR di-restart.');
